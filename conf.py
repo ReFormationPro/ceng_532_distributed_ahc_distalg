@@ -9,10 +9,10 @@ sys.path.insert(0, os.path.abspath('.'))
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
-
-project = 'Distributed Algorithm on AHCv2: distalgname'
-copyright = '2024, Your Name'
-author = 'Your Name'
+# TODO I may need to choose this name better and decide whether to use Turkish characters
+project = 'Distributed Algorithms on AHCv2: Merlin-Segall and Chandy-Misra Routing Algorithms'
+copyright = '2024, Oğuzhan Öztaşkın'
+author = 'Oğuzhan Öztaşkın'
 release = 'V1.0.0'
 version = release
 
