@@ -10,10 +10,17 @@ Background and Related Work
 ..
     Present any background information survey the related work. Provide citations.
 
+As previously stated, |CMRouting| is based on [Dijkstra1980]_'s diffusing computations which explore the detection of the termination of distributed algorithms. Chandy-Misra's algorithm uses diffusing computations for termination of its first phase. However, due to the infinite vertices they had to modify the diffusing computations in order to terminate the first phase. In their modification, they allow vertices to change their predecessors even when all acknowledges are not received.
+
+[Lakshmanan1989]_ created a synchronous version of the algorithm and analyzed its message and complexities. They report the synchronous version has O(\|V\|\|E\|) message complexity and O(\|V\|) time complexity. Then, they combine the algorithm with a synchronizer to create an asynchronous protocol with the same compexities. The synchronizer has O(m) message complexity and O(1) time complexity overhead.
+
+TODO Add new papers
+
+
 Distributed Algorithm: |CMRouting| 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Below you can find pseudo code for how |CMRouting| algorithm runs on the nodes.
+Below you can find pseudo code for how |CMRouting| runs on the nodes.
 :ref:`Algorithm <_CMRoutingAlgorithmDestNodeLabel>` shows how the destination node initiates the algorithm to start the calculations of a route to itself.
 :ref:`Algorithm <CMRoutingAlgorithmNonDestNodeLabel>` shows how non destination nodes handle distance and acknowledgement messages.
 
@@ -128,7 +135,7 @@ Receiving an acknowledgement message indicates that the processing of the corres
 The first phase ends for a node when the node detects a negative cycle or all expected acknowledgement messages are received.
 Now, consider two cases:
 
-1- Assume there is no negative cycles. All nodes will receive distance messages from their neighbors.
+Assume there is no negative cycles. All nodes will receive distance messages from their neighbors.
 Consider a non-destination node.
 If the received distance by this node is larger than or equal to the minimal distance observed by it so far, it will send an acknowledgement to the sender.
 Thus, all distance message senders but one of them will receive an acknowledgement in this way.
@@ -142,7 +149,7 @@ Thus, the number of expected acknowledgements will not increase anymore and it w
 Hence, all non-destination nodes will send as many acknowledgement messages as the distance messages they received.
 Finally, the destination node will receive all its acknowledgement messages and terminate.
 
-2- Now assume that there is a negative cycle.
+Now assume that there is a negative cycle.
 Then the nodes on the cycle are by definition connected and they will receive distance messages from their predecessor on the cycle.
 Eventually the first node of the negative cycle (the node on the cycle that is first observed) will receive a distance from the node on the end of the cycle.
 Since the cycle is negative, this distance will be less than the minimal distance observed by the first node of the cycle so far.
@@ -156,12 +163,25 @@ Hence, in either case phase 1 always terminates.
 This will trigger phase 2, and phase 2 "over-" messages will be sent to every neighbor, ending phase 1 for everyone and reaching the conclusion of "negative cycle" on all of the network.
 Hence, negative cycle will always be detected.
 
-If there is no negative cycle, then a minimum distance route to the destination exists.
-We want to show the algorithm will calculate a minimum distance route to the destination node for all its non-destination nodes.
-TODO
+If there is no negative cycle, then a minimum distance route to the destination exists. Again, it follows from the termination proof that distance reports are bounded from below by the minimum distance and the algorithm will not terminate until this bound is reached. Hence, it calculates the shortest path.
+
+*Safety*: If an acknowledgement package is lost, the algorithm may not ever terminate as it has no counter-measure built-in for such a case. Furthermore, as the edge count increases the number of messages sent will increase just as much and may hog the network and disrupt the algorithm or other services.
+
+*Fairness*: The algorithm is largely fair; however, some nodes might utilize network more than others, such as those that have more edges and those that are far from the destination. 
 
 Complexity 
 ~~~~~~~~~~
+.. 
+    The shortest path computations start from the destination node and first nodes to calculate their distance correctly are those that are closer. Thus, time complexity increases as the distance of the nodes increases. 
+
+1. **Time Complexity:** In [Lakshmanan1989]_'s analysis of the synchronous version of the algorithm, they determined that the time complexity is O(\|V\|)
+2. **Message Complexity:** In [Lakshmanan1989]_'s analysis of the synchronous version of the algorithm, they determined that the message complexity is O(\|EV\|). The authors of the algorithm also state that each node only needs to keep the last message of a neighbor in the memory, so asynchronous version also requires O(\|EV\|) memory.
+
+.. [Chandy1982] K. Mani Chandy and Jayadev Misra. "Distributed computation on graphs: Shortest path algorithms." Communications of the ACM 25.11 (1982): 833-837.
+.. [Dijkstra1980] Edsger W. Dijkstra and Carel S. Scholten. "Termination detection for diffusing computations." Information Processing Letters 11.1 (1980): 1-4.
+.. [Lakshmanan1989] K. B. Lakshmanan, Krishnaiyan Thulasiraman, and M. A. Comeau. 
+    "An efficient distributed protocol for finding shortest paths in networks with negative weights." 
+    IEEE Transactions on Software engineering 15.5 (1989): 639-644.
 
 ..
     Present theoretic complexity results in terms of number of messages and computational complexity.
