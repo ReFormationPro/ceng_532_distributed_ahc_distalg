@@ -12,13 +12,20 @@ Background and Related Work
 
 As previously stated, |CMRouting| is based on [Dijkstra1980]_'s diffusing computations which explore the detection of the termination of distributed algorithms. Chandy-Misra's algorithm uses diffusing computations for termination of its first phase. However, due to the infinite vertices they had to modify the diffusing computations in order to terminate the first phase. In their modification, they allow vertices to change their predecessors even when all acknowledges are not received.
 
-[Lakshmanan1989]_ created a synchronous version of the algorithm and analyzed its message and complexities. They report the synchronous version has O(\|V\|\|E\|) message complexity and O(\|V\|) time complexity. Then, they combine the algorithm with a synchronizer to create an asynchronous protocol with the same compexities. The synchronizer has O(m) message complexity and O(1) time complexity overhead.
+[Lakshmanan1989]_ created a synchronous version of the algorithm and analyzed its message and complexities. They report the synchronous version has O(\|V\|\|E\|) message complexity and O(\|V\|) time complexity. Then, they combine the algorithm with a synchronizer to create an asynchronous protocol with the same complexities. The synchronizer has O(m) message complexity and O(1) time complexity overhead.
 
 TODO Add new papers
 
 
 Distributed Algorithm: |CMRouting| 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The Chandy-Misra algorithm is a distributed algorithm designed to compute the shortest paths from a single source vertex to all other vertices in a network represented as a directed graph. The algorithm operates in two phases and leverages message passing between processes (representing vertices) to propagate path information and update distance estimates.
+
+In phase 1, the vertices send distance and acknowledgement messages to each other. Distance messages allow the vertices to select a predecessor that provides the shortest path to the source vertex. When a distance message is received, the sender of the distance message waits for an acknowledgement message from receiver. The receiver sends this acknowledgement when the processing of the distance message is finished. For example, if the receiver has a shorter distance than the distance in the message, it has no processing to do and hence it sends an acknowledgement message to the sender. If the distance of the receiver is greater, then the receiver reports this path to its neighbors and waits for acknowledgement from them. When it receives all of the acknowledgements, it sends the acknowledgement to the sender.
+
+Phase 2 is used to terminate the algorithm. There are two messages in phase 2: "over-" and "over?". When a negative cycle is detected by a vertex, it sends "over-" message to all its neighbors. Neighbors that are seeing the "over-" for the first time forward this message to their own neighbors. All neighbors who receive "over-" message terminate phase 1 and exit. "over?" message is similar, however it is sent when a vertex receives all of the acknowledgement messages it expects.
+
 
 Below you can find pseudo code for how |CMRouting| runs on the nodes.
 :ref:`Algorithm <_CMRoutingAlgorithmDestNodeLabel>` shows how the destination node initiates the algorithm to start the calculations of a route to itself.
@@ -36,7 +43,7 @@ Below you can find pseudo code for how |CMRouting| runs on the nodes.
         Number of unacknowledged messages: num
         Id of this node: self_id
 
-    Events: Init, LengthMessageReceived
+    Events: Init, LengthMessageReceived, Acknowledgement
     Needs:
 
     OnInit: () do
@@ -90,7 +97,7 @@ Below you can find pseudo code for how |CMRouting| runs on the nodes.
         Number of unacknowledged messages: num
         Id of this node: self_id
 
-    Events: Init, LengthMessageReceived
+    Events: Init, LengthMessageReceived, Acknowledgement
     Needs:
 
     OnInit: () do
@@ -124,12 +131,30 @@ Below you can find pseudo code for how |CMRouting| runs on the nodes.
         # If no other acknowledgement message is expected, start phase 2
         if num == 0 then TerminatePhaseI(); StartPhaseII();
 
+Example
+~~~~~~~~~~~
+Let there be four nodes called A, B, C, and D. Set the link weights: A-B is 3, A-C is 2, B-C is 1, and C-D is 4. We will illustrate how Chandy-Misra algorithm calculates the shortest paths to A.
+
+#. Node A sets its own distance to 0 and sends its neighbors B and C distance messages MSG(0 + neighbor_link_distance( B ), A) and MSG(0 + neighbor_link_distance( C ), A), respectively. Furthermore, A sets the number of expected acknowledgements to 2.
+#. Node B receives the distance message MSG(3, A) and changes its distance from infinity to 3. It sends MSG(4, B) to C. Then increases number of expected acknowledgement messages to 1. Furthermore, B sets its predecessor to A.
+#. Node C receives the distance message MSG(2, A) and changes its distance from infinity to 2. It sends MSG(3, C) to B and MSG(6, C) to D. Then increases the number of expected acknowledgement messages to 2. Furthermore, C sets its predecessor to A.
+#. Node C receives the distance message MSG(4, B). Since C currently has distance 2 to sink, it just sends an acknowledgement message to B.
+#. Node B receives the distance message MSG(3, C). Since B currently has distance 3 to sink, it just sends an acknowledgement message to C.
+#. Node B receives the acknowledgement message from C and decreases the number of expected acknowledgement messages. This value reaches 0 and hence B sends an acknowledgement message to A.
+#. Node B receives the acknowledgement message from B and decreases the number of expected acknowledgement messages. This value reaches 1.
+#. Node A receives the acknowledgement message from A and decreases the number of expected acknowledgement messages. This value reaches 1.
+#. Node D receives the distance message MSG(6, C). Changes its distance from infinity to 6 and sets C as its predecessor. It has no neighbors it can send distance message to, hence sends acknowledgement to C.
+#. Node C receives the acknowledgement message from D and decreases the number of expected acknowledgement messages. This value reaches 0. Hence, sends A an acknowledgement message.
+#. Node A receives the acknowledgement message. Then A decreases the number of expected acknowledgement messages to 0. Thus, A terminates phase 1 and starts phase 2.
+#. Node A sends "over?" message to B and C, C sends "over?" message to B and D, B sends "over?" message to C.
+#. Algorithm finishes.  
+
 Correctness
 ~~~~~~~~~~~
 ..
     Present Correctness, safety, liveness and fairness (not an issue as distributed and nothing blocks anything important) proofs.
 
-*Termination (liveness)*: 
+*Termination*: 
 The algorithm starts with the destination node sending distance messages to its neighbors and waiting for acknowledgement messages.
 Receiving an acknowledgement message indicates that the processing of the corresponding distance message has ended.
 The first phase ends for a node when the node detects a negative cycle or all expected acknowledgement messages are received.

@@ -16,6 +16,7 @@
    algorithm
    results
    conclusion
+   chatgpt
 
 
 
