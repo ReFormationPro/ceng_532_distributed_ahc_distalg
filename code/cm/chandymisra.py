@@ -5,22 +5,26 @@ from adhoccomputing.Networking.LinkLayer import GenericLinkLayer
 from adhoccomputing.Networking.ApplicationLayer import GenericApplicationLayer
 from enum import Enum
 
+
 class CMMessageType(Enum):
     DISTANCE = "DISTANCE"
     ACKNOWLEDGEMENT = "ACKNOWLEDGEMENT"
+
 
 class DistanceMessage(GenericMessage):
     def __init__(self, header: GenericMessageHeader, distance: float):
         super(header, GenericMessagePayload(distance))
 
+
 class AcknowledgementMessage(GenericMessage):
     def __init__(self, header: GenericMessageHeader):
         super(header, GenericMessagePayload(None))
 
+
 class CMLayer(GenericModel):
     def __init__(self, componentname, componentinstancenumber):
         super().__init__(componentname, componentinstancenumber)
-        
+
         self.distance: float = float('inf')
         self.predecessor_instance_number: int = -1
         self.num: int = 0
@@ -28,7 +32,7 @@ class CMLayer(GenericModel):
         self.eventhandlers[CMMessageType.DISTANCE] = self.on_distance
         self.eventhandlers[CMMessageType.ACKNOWLEDGEMENT] = self.on_acknowledgement
         self.eventhandlers[EventTypes.INIT] = self.on_init
-    
+
     def on_init(self, eventobj: Event):
         pass
 
@@ -78,26 +82,87 @@ class CMLayer(GenericModel):
     def make_msg_header(self, destination_instance_number):
         # TODO
         nexthop = MessageDestinationIdentifiers.LINKLAYERBROADCAST
-        interface_id = float("inf") #self.uniquebroadcastidentifier
+        interface_id = float("inf")  # self.uniquebroadcastidentifier
         hdr = GenericMessageHeader(
             CMMessageType.DISTANCE,
             self.componentinstancenumber,
             destination_instance_number,
             nexthop,
             interface_id,
-            #sequence_number
+            # sequence_number
         )
         return hdr
-    
+
     def send_distance_msg(self, destination_instance_number, distance):
         hdr = self.make_msg_header(destination_instance_number)
         msg = DistanceMessage(hdr, distance)
         self.send_down(Event(self, EventTypes.MFRT, msg))
-    
+
     def send_acknowledgement_msg(self, destination_instance_number):
         hdr = self.make_msg_header(destination_instance_number)
         msg = AcknowledgementMessage(hdr)
         self.send_down(Event(self, EventTypes.MFRT, msg))
+
+    def initiate_phase_two(self, success: bool):
+        """
+        Called when over- or over? is received
+        success: True if over? is recevied, 
+                 False if over- is received
+        """
+        if self.num > 0:
+            if self.distance != float("-inf"):
+                self.distance = float("-inf")
+                # TODO Send over- to all neighbors
+                pass
+        elif self.num == 0:
+            if not success:
+                # num == 0 and over- is recv
+                if self.distance != float("-inf"):
+                    self.distance = float("-inf")
+                    # TODO Send over- to all neighbors
+                    pass
+            else:
+                # num == 0 and over? is recv
+                if self.distance != float("-inf"):
+                    # TODO Send over? to all neighbors who have not received such a msg
+                    pass
+
+
+class CMLayerDestination(CMLayer):
+    # FIXME May need to override __init__ to override dist/ack message handlers
+
+    def initiate_phase_one(self):
+        self.distance = 0
+        self.predecessor_instance_number = -1
+        neighbors = Topology().get_neighbors(self.componentinstancenumber)
+        self.num = len(neighbors)
+        for n in neighbors:
+            estimated_distance = None  # TODO
+            self.send_distance_msg(n, estimated_distance)
+
+    def on_distance(self, dist_msg: DistanceMessage):
+        distance_in_msg = dist_msg.payload.messagepayload
+        if distance_in_msg < 0:
+            # Negative cycle
+            self.initiate_phase_two(False)
+            pass
+        else:
+            self.send_acknowledgement_msg(dist_msg.header.messagefrom)
+
+    def on_acknowledgement(self, msg: AcknowledgementMessage):
+        # TODO Use locks
+        self.num -= 1
+        if self.num == 0:
+            # Terminate phase 1, start phase 2
+            self.initiate_phase_two(True)
+
+    def initiate_phase_two(self, success: bool):
+        if success:
+            # TODO Send over? msgs to all neigbors
+            pass
+        else:
+            # TODO Send over- msgs to all neighbors
+            pass
 
 
 class CMNode(GenericModel):
