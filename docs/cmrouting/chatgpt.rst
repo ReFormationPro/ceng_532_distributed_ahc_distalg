@@ -114,23 +114,28 @@ I used ChatPDF website which is based on ChatGPT to generate text for abstract, 
     PDF: The Chandy-Misra algorithm is a distributed algorithm designed to compute the shortest paths from a single source vertex to all other vertices in a network represented as a directed graph. The algorithm operates in two phases and leverages message passing between processes (representing vertices) to propagate path information and update distance estimates. Here is a high-level description of the Chandy-Misra algorithm:
 
     1. **Initialization**:
+
     - The algorithm is initiated by the source process (representing the source vertex) setting its own distance to 0 and sending length messages to its neighboring processes with the weights of the corresponding edges.
     - Each process updates its distance estimate based on the received messages.
 
     1. **Phase I**:
+
     - In this phase, processes exchange messages to update their distance estimates iteratively.
     - Each process sends length messages to its neighbors, containing the sum of the current distance estimate and the weight of the connecting edge.
     - Processes update their distance estimates upon receiving messages and continue to propagate updated information to their neighbors.
 
     1. **Phase II**:
+
     - The goal of Phase II is to ensure that all processes have accurate distance estimates, especially in the presence of negative cycles.
     - Processes identify if there are vertices with distances of negative infinity (indicating paths through negative cycles) and propagate this information to ensure consistency across the network.
 
     1. **Termination**:
+
     - The algorithm terminates when all processes have accurate distance estimates, and the shortest paths from the source vertex to all other vertices are computed.
     - At this point, each process has the correct distance estimate representing the shortest path length from the source vertex.
 
     Key Features:
+    
     - **Message Passing**: Processes communicate by exchanging messages containing path information to update distance estimates.
     - **Iterative Updates**: Distance estimates are iteratively refined based on incoming messages from neighboring processes.
     - **Handling Negative Cycles**: The algorithm addresses the presence of negative cycles by ensuring that processes correctly handle paths with infinite distances.

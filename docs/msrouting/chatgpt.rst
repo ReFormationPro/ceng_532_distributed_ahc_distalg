@@ -56,7 +56,6 @@ I used ChatPDF website which is based on ChatGPT to generate text for abstract, 
 
     PDF: Certainly! Here is a simplified pseudo code representation of the Merlin-Segall algorithm for a failsafe distributed routing protocol:
 
-    ```
     Initialize:
 
     - Each node i maintains a preferred neighbor pi and an estimated distance di to the destination (SINK).
@@ -97,8 +96,6 @@ I used ChatPDF website which is based on ChatGPT to generate text for abstract, 
      
     - Update routing tables continuously to adapt to dynamic network conditions.
     - Ensure failsafe routing paths between all physically connected nodes.
-
-    ```
 
     This pseudo code provides a high-level overview of the Merlin-Segall algorithm's key operations and mechanisms for maintaining efficient and reliable routing paths in distributed communication networks.
 
