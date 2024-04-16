@@ -67,16 +67,17 @@ class MSLayer(GenericModel):
     def __init__(self, componentname, componentinstancenumber):
         super().__init__(componentname, componentinstancenumber)
 
-        self.distance: float = float('inf')
-        self.predecessor_instance_number: int = -1
+        self.predecessor_instance_number: int = -1  # p_i
+        self.distance: float = float('inf')         # d_i
         # Maps neighbor id to its link weight
-        self.link_weights = {}
-        self.curr_cycle_number = -1
-        self.last_recevied_cycle_number = {}
-        self.maximum_received_cycle_number = -1
-        self.distance_table = {}
-        self.link_status = {}
-        self.synchronization_number = {}
+        self.link_weights = {}                      # d_il
+        self.curr_cycle_number = -1                 # n_i
+        self.maximum_received_cycle_number = -1     # mx_i
+        self.context                                # CT
+        self.last_recevied_cycle_number = {}        # N_i(l)
+        self.distance_table = {}                    # D_i(l)
+        self.link_status = {}                       # F_i(l)
+        self.synchronization_number = {}            # z_i(l)
 
         self.eventhandlers[MSMessageType.DISTANCE] = self.on_distance
         self.eventhandlers[MSMessageType.FAIL] = self.on_fail
@@ -84,6 +85,12 @@ class MSLayer(GenericModel):
         self.eventhandlers[MSMessageType.WAKE] = self.on_wake
         self.eventhandlers[EventTypes.INIT] = self.on_init
     
+    def on_init(self, init_event: Event):
+        """
+        Non-destination nodes do not use this event.
+        """
+        pass
+
     def on_distance(self, distance_event: Event):
         """
         Updates distance table
@@ -120,6 +127,10 @@ class MSLayer(GenericModel):
             self.send_req(self.predecessor_instance_number, sender_cycle_number)
         
     def on_wake(self, wake_event: Event):
+        """
+        TODO Pseudo-code has unclear comments. Needs to determine how it
+        will be implemented.
+        """
         # NOTE Assuming F_i(l) is DOWN
         # TODO
         pass
@@ -130,15 +141,68 @@ class MSLayer(GenericModel):
         """
         pass
 
+class MSLayerDestination(MSLayer):
+    """
+    Merlin-Segall layer implementation for the destination node.
+
+    TODO: Heavily depends on FSM. Implement FSM.
+    """
+    
+    def on_init(self, init_event: Event):
+        """
+        Executes FSM.
+        """
+        self.CT = 0
+        # TODO Execute FSM
+
+    def on_distance(self, distance_event: Event):
+        """
+        Updates last received cycle number and runs FSM
+        """
+        distance_msg = distance_event.eventcontent
+        sender_cycle_number, sender_distance, sender_id = distance_msg.payload.messagepayload
+        self.last_recevied_cycle_number[sender_id] = sender_cycle_number
+        self.CT = 0
+        # TODO Execute FSM
+        
+    def on_fail(self, fail_event: Event):
+        """
+        Handles link failure by updating link status and running FSM.
+        """
+        fail_msg = fail_event.eventcontent
+        sender_id = fail_msg.payload.messagepayload
+        self.link_status[sender_id] = MSLinkStatus.DOWN
+        self.CT = 0
+        # TODO Execute FSM
+        
+    def on_req(self, req_event: Event):
+        """
+        Handles new cycle requests by running FSM.
+        """
+        self.CT = 0
+        # TODO Execute FSM
+        
+    def on_wake(self, wake_event: Event):
+        """
+        TODO Pseudo-code has unclear comments. Needs to determine how it
+        will be implemented. 
+        """
+        # NOTE F_i(l) = DOWN
+        # TODO
+        pass
+
 class MSNode(GenericModel):
     """
     Initializes a node with application, Merlin-Segall, and link layers.
     """
-    def __init__(self, componentname, componentid):
+    def __init__(self, componentname, componentid, is_destination_node = False):
         # SUBCOMPONENTS
         self.applicationlayer = GenericApplicationLayer(
             "ApplicationLayer", componentid)
-        self.msservice = MSLayer("MSLayer", componentid)
+        if is_destination_node:
+            self.msservice = MSLayerDestination("MSLayer", componentid)
+        else:
+            self.msservice = MSLayer("MSLayer", componentid)
         self.linklayer = GenericLinkLayer("LinkLayer", componentid)
 
         # CONNECTIONS AMONG SUBCOMPONENTS

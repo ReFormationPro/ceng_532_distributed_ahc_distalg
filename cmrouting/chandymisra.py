@@ -214,11 +214,14 @@ class CMNode(GenericModel):
     """
     Initializes a Chandy-Misra node with application, Chandy-Misra, and link layers.
     """
-    def __init__(self, componentname, componentid):
+    def __init__(self, componentname, componentid, is_destination_node = False):
         # SUBCOMPONENTS
         self.applicationlayer = GenericApplicationLayer(
             "ApplicationLayer", componentid)
-        self.cmservice = CMLayer("CMLayer", componentid)
+        if is_destination_node:
+            self.cmservice = CMLayerDestination("CMLayer", componentid)
+        else:
+            self.cmservice = CMLayer("CMLayer", componentid)
         self.linklayer = GenericLinkLayer("LinkLayer", componentid)
 
         # CONNECTIONS AMONG SUBCOMPONENTS
