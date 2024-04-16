@@ -5,6 +5,7 @@ from adhoccomputing.Networking.LinkLayer import GenericLinkLayer
 from adhoccomputing.Networking.ApplicationLayer import GenericApplicationLayer
 from enum import Enum
 
+# TODO Implement over- and over? message handlers, message types etc.
 
 class CMMessageType(Enum):
     """

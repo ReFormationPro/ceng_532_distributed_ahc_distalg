@@ -10,13 +10,27 @@ Background and Related Work
 ..
     Present any background information survey the related work. Provide citations.
 
-[Shakar1992]_ compared SPF (Shortest Path First), ExBF (Extended Bellman—Ford) and Merlin-Segall algorithms under simulated dynamic workload. Their results showed that ExBF performs the best whereas Merlin-Segall performs up to 30% worse.
+[Shakar1992]_ compared SPF (Shortest Path First), ExBF (Extended Bellman—Ford) and Merlin-Segall algorithms under simulated dynamic workload. 
+Their results showed that ExBF performs the best whereas Merlin-Segall performs up to 30% worse.
 
-[Aceves1993]_ compares distributed dynamic shortest path computation algorithms proposed by Chandy and Misra, Jaffe and Moss, Merlin and Segall, and by the author himself. In their complexity analysis section they compare time and message complexities.
-A few of the algorithms compared are DBF (Distributed Bellman-Ford algorithm) with O(N), O(N\ :sup:`2`\ ); ILS (Ideal Link State algorithm) with O(d), O(2E) and Merlin-Segall has O(d\ :sup:`2`\ ), O(N\ :sup:`2`\ ) complexities where N denotes the number of nodes, d denotes the diameter of the network, E denotes the number of edges. From this, it is clear that Merlin-Segall has high complexities.
+[Aceves1993]_ compares distributed dynamic shortest path computation algorithms proposed by Chandy and Misra, Jaffe and Moss, Merlin and Segall, and by the author himself. 
+In their complexity analysis section they compare time and message complexities.
+A few of the algorithms compared are DBF (Distributed Bellman-Ford algorithm) with O(N), O(N\ :sup:`2`\ ); ILS (Ideal Link State algorithm) with O(d), O(2E) and Merlin-Segall has O(d\ :sup:`2`\ ), O(N\ :sup:`2`\ ) complexities where N denotes the number of nodes, d denotes the diameter of the network, E denotes the number of edges. 
+From this, it is clear that Merlin-Segall has high complexities.
 
 Distributed Algorithm: |MSRouting| 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Merlin-Segall algorithm uses update rounds to calculate the shortest paths iteratively. In each update round, each node reports their estimated distance to the destination node to its neighbors, except the neighbor that they use as the next hop for the destination. Upon receiving such a report from a neighbor, nodes recalculate their distance to the destination node and chooses the shortest path by changing their next hop. At round i, the shortest paths of size less than or equal to i are calculated by the nodes. Thus, it takes at most diameter-of-the-network many update rounds to calculate each shortest path.
+
+The algorithm is robust to link/node failures or joins by utilizing FAIL, WAKE, and REQ messages. FAIL message indicates a link failure between two nodes, WAKE message indicates a new link between two nodes is available, and REQ message is a request for a new update cycle. Node failures are special cases of link failures where all links to a node have failed and no other logic for node failure handling is used.
+
+Link failures are handled by requesting a new update cycle by REQ messages. If a REQ message cannot be delivered due to a link loss, then this link loss will trigger a FAIL message on both ends of the link. Hence, even if a REQ message cannot be forwarded, a FAIL message will occur at the other end of the link, which will create a new REQ message. Thus, eventually a new update cycle will be triggered and the network will be repaired.
+
+..
+    TODO Mention cycle-freeness, solution for negative cycles if the paper mentions.
+
+The authors highlight that the calculated shortest paths should not be exclusively used as the sole path to the destination, rather the utilization of these paths should be iteratively increased for a balanced network use. Another note of the authors is the algorithm can also be used for minimum latency path calculations by simply replacing distances with latencies.
 
 ..
     An example distributed algorithm for broadcasting on an undirected graph is presented in  :ref:`Algorithm <NonSinkUpdateCycleAlgorithmLabel>`.

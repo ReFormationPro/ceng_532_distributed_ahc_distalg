@@ -14,9 +14,21 @@ The persistent challenge of computing shortest paths in distributed systems, par
 ..
     Previous solutions may have encountered limitations in scalability, fault tolerance, or computational efficiency, necessitating innovative approaches to enhance the algorithm's performance and applicability in real-world scenarios.
 
-The proposed distributed algorithm for computing shortest paths encompasses novel message-passing protocols, diffusing computation principles, and fault tolerance mechanisms tailored for accurate path computations in the presence of negative cycles. By leveraging innovative techniques and addressing the limitations of existing solutions, the algorithm aims to provide efficient and reliable shortest path computations in distributed graph networks, offering insights into network optimization and routing efficiency while ensuring scalability and fault tolerance in dynamic computing environments.
+Chandy-Misra distributed algorithm for computing shortest paths encompasses novel message-passing protocols, diffusing computation principles, and fault tolerance mechanisms tailored for accurate path computations in the presence of negative cycles. 
+By leveraging innovative techniques and addressing the limitations of existing solutions, the algorithm aims to provide efficient and reliable shortest path computations in distributed graph networks, offering insights into network optimization and routing efficiency while ensuring scalability and fault tolerance in dynamic computing environments.
+In this project, we provide an implementation for the algorithm on the AHCv2 platform.
+AHCv2 allows us to simulate multiple layers, most notably application, overlay network, and link layer.
+It allows us to implement the algorithm in a modular way with high customization options on each layer.
 
-TODO Add section descriptions here.
+Our primary contributions consist of the following:
+
+- Providing an implementation of Chandy-Misra algorithm on AHCv2
+- Demonstrating the algorithm on application, Chandy-Misra overlay, and link layers
+
+More contributions will be added after tests.
+
+..
+    TODO Add section descriptions here.
 
 .. [Chandy1982]  K. Mani Chandy, and Jayadev Misra. "Distributed computation on graphs: Shortest path algorithms." Communications of the ACM 25.11 (1982): 833-837.
 

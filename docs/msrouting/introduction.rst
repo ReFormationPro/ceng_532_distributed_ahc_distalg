@@ -5,28 +5,31 @@ Introduction
 
 **Introduction to Merlin-Segall Routing Algorithm**
 
-In the realm of communication networks, efficient routing protocols play a pivotal role in ensuring seamless data transmission between nodes. One such algorithm that has garnered attention for its failsafe distributed routing capabilities is the Merlin-Segall algorithm. This algorithm, developed by P. M. Merlin and A. Segall, addresses the challenge of constructing and maintaining routing tables in dynamic network environments.
+In the realm of communication networks, efficient routing protocols play a pivotal role in ensuring seamless data transmission between nodes. 
+One such algorithm that has garnered attention for its failsafe distributed routing capabilities is the Merlin-Segall algorithm. 
+This algorithm, developed by P. M. Merlin and A. Segall, addresses the challenge of constructing and maintaining routing tables in dynamic network environments.
 
-The problem at hand revolves around the need for a routing protocol that can adapt to network changes, recover from failures, and provide loop-free routes to each destination at all times. In today's interconnected world, where data transfer is the lifeblood of various applications and services, the ability to establish reliable communication paths is crucial. Without a robust routing protocol in place, network disruptions, bottlenecks, and data loss can impede the flow of information, leading to inefficiencies and potential service disruptions.
+The problem at hand revolves around the need for a routing protocol that can adapt to network changes, recover from failures, and provide loop-free routes to each destination at all times. 
+In today's interconnected world, where data transfer is the lifeblood of various applications and services, the ability to establish reliable communication paths is crucial. 
+Without a robust routing protocol in place, network disruptions, bottlenecks, and data loss can impede the flow of information, leading to inefficiencies and potential service disruptions.
 
-The significance of solving this problem lies in the ability to maintain optimal communication paths in the face of network disruptions, thereby minimizing delays and ensuring data integrity. Failure to address this challenge can result in network congestion, packet loss, and inefficient data routing, ultimately impacting the overall performance of the network.
+The significance of solving this problem lies in the ability to maintain optimal communication paths in the face of network disruptions, thereby minimizing delays and ensuring data integrity. 
+Failure to address this challenge can result in network congestion, packet loss, and inefficient data routing, ultimately impacting the overall performance of the network.
 
-The complexity of this problem stems from the dynamic nature of communication networks, where traditional routing approaches may fall short in handling rapid changes in network topology and link failures. Naive approaches often struggle to provide failsafe routing solutions that can adapt to evolving network conditions.
+The complexity of this problem stems from the dynamic nature of communication networks, where traditional routing approaches may fall short in handling rapid changes in network topology and link failures. 
+Naive approaches often struggle to provide failsafe routing solutions that can adapt to evolving network conditions.
 
-Previous solutions in the realm of distributed routing algorithms have faced limitations in terms of recovery from arbitrary topological changes and ensuring loop-free routes at all times. The Merlin-Segall algorithm sets itself apart by introducing features that guarantee recovery from network disruptions and maintain loop-free routes to each destination, even in the face of dynamic changes.
+Previous solutions in the realm of distributed routing algorithms have faced limitations in terms of recovery from arbitrary topological changes and ensuring loop-free routes at all times. 
+The Merlin-Segall algorithm sets itself apart by introducing features that guarantee recovery from network disruptions and maintain loop-free routes to each destination, even in the face of dynamic changes.
 
-Key components of the Merlin-Segall algorithm include adaptive routing mechanisms, failsafe distributed routing protocols, and efficient recovery strategies. By leveraging these components, the algorithm aims to provide robust and efficient routing solutions in dynamic communication networks.
-
-
-TODO Fix the following:
+Key components of the Merlin-Segall algorithm include adaptive routing mechanisms, failsafe distributed routing protocols, and efficient recovery strategies. 
+By leveraging these components, the algorithm aims to provide robust and efficient routing solutions in dynamic communication networks.
 
 Contributions:
 
-- Introduction of a failsafe distributed routing protocol for dynamic network environments (Section 2)
-- Analysis of the key features and challenges of the Merlin-Segall algorithm (Section 3)
-- Comparison with previous routing solutions and highlighting the unique aspects of the proposed algorithm (Section 4)
-- Implementation of the algorithm in the AHCv2 platform and benchmarking results (Section 5)
-- Discussion on the limitations and future research directions of the Merlin-Segall algorithm (Section 6)
+- Analysis of the key features and challenges of the Merlin-Segall algorithm (Algorithm Section)
+- Implementation of the algorithm in the AHCv2 platform and benchmarking results (Implementation, Results and Discussion Section)
+- Discussion on the alterations in the implementation, the limitations, and future research directions of the Merlin-Segall algorithm (Implementation, Results and Discussion Section)
 
 ..
     If you would like to get a good grade for your project, you have to write a good report.  Your project will be assessed mostly based on the report. Examiners are not mind-readers, and cannot give credit for work which you have done but not included in the report [York2017]_.

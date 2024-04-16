@@ -26,6 +26,9 @@
    .. autoclass:: MSLayer
       :members:
       :undoc-members:
+   .. autoclass:: MSLayerDestination
+      :members:
+      :undoc-members:
    .. autoclass:: MSLinkStatus
       :members:
       :undoc-members:

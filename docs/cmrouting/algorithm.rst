@@ -10,9 +10,15 @@ Background and Related Work
 ..
     Present any background information survey the related work. Provide citations.
 
-As previously stated, |CMRouting| is based on [Dijkstra1980]_'s diffusing computations which explore the detection of the termination of distributed algorithms. Chandy-Misra's algorithm uses diffusing computations for termination of its first phase. However, due to the infinite vertices they had to modify the diffusing computations in order to terminate the first phase. In their modification, they allow vertices to change their predecessors even when all acknowledges are not received.
+As previously stated, |CMRouting| is based on [Dijkstra1980]_'s diffusing computations which explore the detection of the termination of distributed algorithms.
+Chandy-Misra's algorithm uses diffusing computations for termination of its first phase. 
+However, due to the infinite vertices they had to modify the diffusing computations in order to terminate the first phase. 
+In their modification, they allow vertices to change their predecessors even when all acknowledgments are not received.
 
-[Lakshmanan1989]_ created a synchronous version of the algorithm and analyzed its message and complexities. They report the synchronous version has O(\|V\|\|E\|) message complexity and O(\|V\|) time complexity. Then, they combine the algorithm with a synchronizer to create an asynchronous protocol with the same complexities. The synchronizer has O(m) message complexity and O(1) time complexity overhead.
+[Lakshmanan1989]_ created a synchronous version of the algorithm and analyzed its message and complexities. 
+They report the synchronous version has O(\|V\|\|E\|) message complexity and O(\|V\|) time complexity. 
+Then, they combine the algorithm with a synchronizer to create an asynchronous protocol with the same complexities. 
+The synchronizer has O(m) message complexity and O(1) time complexity overhead.
 
 TODO Add new papers
 
@@ -20,11 +26,27 @@ TODO Add new papers
 Distributed Algorithm: |CMRouting| 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The Chandy-Misra algorithm is a distributed algorithm designed to compute the shortest paths from a single source vertex to all other vertices in a network represented as a directed graph. The algorithm operates in two phases and leverages message passing between processes (representing vertices) to propagate path information and update distance estimates.
+The Chandy-Misra algorithm is a distributed algorithm designed to compute the shortest paths from a single source vertex to all other vertices in a network represented as a directed graph. 
+The algorithm operates in two phases and leverages message passing between processes (representing vertices) to propagate path information and update distance estimates.
 
-In phase 1, the vertices send distance and acknowledgement messages to each other. Distance messages allow the vertices to select a predecessor that provides the shortest path to the source vertex. When a distance message is received, the sender of the distance message waits for an acknowledgement message from receiver. The receiver sends this acknowledgement when the processing of the distance message is finished. For example, if the receiver has a shorter distance than the distance in the message, it has no processing to do and hence it sends an acknowledgement message to the sender. If the distance of the receiver is greater, then the receiver reports this path to its neighbors and waits for acknowledgement from them. When it receives all of the acknowledgements, it sends the acknowledgement to the sender.
+In phase 1, the vertices send distance and acknowledgement messages to each other. 
+Distance messages allow the vertices to select a predecessor that provides the shortest path to the source vertex. 
+When a distance message is received, the sender of the distance message waits for an acknowledgement message from receiver. 
+The receiver sends this acknowledgement when the processing of the distance message is finished. 
+For example, if the receiver has a shorter path to the destination than the one message reports, it simply sends an acknowledgement message to the sender to indicate it is done with it. 
+If the distance of the receiver to the destination is greater than the distance in message plus link weight between the sender and the receiver, then the receiver reports this path to its neighbors and waits for acknowledgement from them.
+The receiver waits for all acknowledgement messages from its neighbors before sending an acknowledgement to the sender.
+Note that if a node has no neighbors other than the sender, it sends an acknowledgement to the sender immediately. 
 
-Phase 2 is used to terminate the algorithm. There are two messages in phase 2: "over-" and "over?". When a negative cycle is detected by a vertex, it sends "over-" message to all its neighbors. Neighbors that are seeing the "over-" for the first time forward this message to their own neighbors. All neighbors who receive "over-" message terminate phase 1 and exit. "over?" message is similar, however it is sent when a vertex receives all of the acknowledgement messages it expects.
+Phase 2 terminates the algorithm.
+This phase is required to avoid infinite loops (negative cycles) and infinite waitings (shortest paths are calculated but nodes still wait for shorter paths).
+There are two messages in phase 2: "over-" and "over?". 
+When a negative cycle is detected by a vertex, it sends "over-" message to all its neighbors.
+Neighbors that are seeing the "over-" for the first time forward this message to their own neighbors.
+All neighbors who receive "over-" message terminate phase 1 and exit. 
+"over?" message is similar, however it is sent when a vertex receives all of the acknowledgement messages it expects.
+One differense is, the initial "over?" message is sent by the destination node and the rest are sent by the nodes that receive an "over?" message, whereas the initial "over-" messages can be sent by any node.
+Thus, one way to view "over?" messages is it is sent upon the destination node asking if all nodes has finished successfulyy whereas "over-" messages are the result of nodes attempting to terminate a negative cycle.
 
 
 Below you can find pseudo code for how |CMRouting| runs on the nodes.
