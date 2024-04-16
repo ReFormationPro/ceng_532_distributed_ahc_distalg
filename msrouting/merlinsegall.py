@@ -6,10 +6,25 @@ from adhoccomputing.Networking.ApplicationLayer import GenericApplicationLayer
 from enum import Enum
 
 class MSMessageType(Enum):
+    """
+    Merlin-Segall message types
+    """
     DISTANCE = "MS_DISTANCE"
+    """
+    Distance reports from neighbors
+    """
     FAIL = "MS_FAIL"
+    """
+    Indicates that a link has failed
+    """
     REQ = "MS_REQ"
+    """
+    Request for a new update cycle
+    """
     WAKE = "MS_WAKE"
+    """
+    Indicated that a new link is available
+    """
 
 class MSLinkStatus(Enum):
     DOWN = "MS_DOWN"
@@ -21,6 +36,10 @@ class FailureMessage(GenericMessage):
         super(header, GenericMessagePayload(sender_id))
 
 class DistanceMessage(GenericMessage):
+    """
+    Carries cycle number, distance and id of the sender.
+    Receiver updates their distance table with the sender distance.
+    """
     def __init__(self, header: GenericMessageHeader, 
                  sender_cycle_number: int, 
                  sender_distance: float, 
@@ -28,14 +47,23 @@ class DistanceMessage(GenericMessage):
         super(header, GenericMessagePayload({sender_cycle_number, sender_distance, sender_id}))
 
 class WakeMessage(GenericMessage):
+    """
+    Indicates that a new link is available
+    """
     def __init__(self, header: GenericMessageHeader, sender_id: int):
         super(header, GenericMessagePayload(sender_id))
 
 class RequestMessage(GenericMessage):
+    """
+    Request for a new update cycle
+    """
     def __init__(self, header: GenericMessageHeader, sender_cycle_number: int):
         super(header, GenericMessagePayload(sender_cycle_number))
 
 class MSLayer(GenericModel):
+    """
+    Implements the Merlin-Segall layer functionality for non-destination component.
+    """
     def __init__(self, componentname, componentinstancenumber):
         super().__init__(componentname, componentinstancenumber)
 
@@ -57,6 +85,9 @@ class MSLayer(GenericModel):
         self.eventhandlers[EventTypes.INIT] = self.on_init
     
     def on_distance(self, distance_event: Event):
+        """
+        Updates distance table
+        """
         distance_msg = distance_event.eventcontent
         sender_cycle_number, sender_distance, sender_id = distance_msg.payload.messagepayload
         if self.link_status[sender_id].get() == MSLinkStatus.READY:
@@ -69,6 +100,9 @@ class MSLayer(GenericModel):
         # TODO Run FSM
         
     def on_fail(self, fail_event: Event):
+        """
+        Handles link failure by sending a new update cycle request.
+        """
         fail_msg = fail_event.eventcontent
         sender_id = fail_msg.payload.messagepayload
         self.link_status[sender_id] = MSLinkStatus.DOWN
@@ -77,6 +111,9 @@ class MSLayer(GenericModel):
             self.send_req(self.predecessor_instance_number, self.curr_cycle_number)
         
     def on_req(self, req_event: Event):
+        """
+        Forwards update cycle requests.
+        """
         req_msg = req_event.eventcontent
         sender_cycle_number = req_msg.payload.messagepayload
         if self.predecessor_instance_number != None:
@@ -88,26 +125,32 @@ class MSLayer(GenericModel):
         pass
 
     def send_req(self, destination_instance_number):
+        """
+        Sends a new update cycle request
+        """
         pass
 
 class MSNode(GenericModel):
+    """
+    Initializes a node with application, Merlin-Segall, and link layers.
+    """
     def __init__(self, componentname, componentid):
         # SUBCOMPONENTS
         self.applicationlayer = GenericApplicationLayer(
             "ApplicationLayer", componentid)
-        self.cmservice = MSLayer("MSLayer", componentid)
+        self.msservice = MSLayer("MSLayer", componentid)
         self.linklayer = GenericLinkLayer("LinkLayer", componentid)
 
         # CONNECTIONS AMONG SUBCOMPONENTS
         self.applicationlayer.connect_me_to_component(
-            ConnectorTypes.DOWN, self.cmservice)
-        self.cmservice.connect_me_to_component(
+            ConnectorTypes.DOWN, self.msservice)
+        self.msservice.connect_me_to_component(
             ConnectorTypes.UP, self.applicationlayer)
 
-        self.cmservice.connect_me_to_component(
+        self.msservice.connect_me_to_component(
             ConnectorTypes.DOWN, self.linklayer)
         self.linklayer.connect_me_to_component(
-            ConnectorTypes.UP, self.cmservice)
+            ConnectorTypes.UP, self.msservice)
 
         # Connect the bottom component to the composite component....
         self.linklayer.connect_me_to_component(ConnectorTypes.DOWN, self)

@@ -7,21 +7,39 @@ from enum import Enum
 
 
 class CMMessageType(Enum):
+    """
+    Chandy-Misra message types
+    """
     DISTANCE = "DISTANCE"
+    """
+    Reports distance to a neighbor.
+    """
     ACKNOWLEDGEMENT = "ACKNOWLEDGEMENT"
+    """
+    Reports the end of processing of a distance report.
+    """
 
 
 class DistanceMessage(GenericMessage):
+    """
+    Carries distance of a node to the destination.
+    """
     def __init__(self, header: GenericMessageHeader, distance: float):
         super(header, GenericMessagePayload(distance))
 
 
 class AcknowledgementMessage(GenericMessage):
+    """
+    Reports the end of processing of a distance report. 
+    """
     def __init__(self, header: GenericMessageHeader):
         super(header, GenericMessagePayload(None))
 
 
 class CMLayer(GenericModel):
+    """
+    Implements Chandy-Misra layer of the routing.
+    """
     def __init__(self, componentname, componentinstancenumber):
         super().__init__(componentname, componentinstancenumber)
 
@@ -51,6 +69,13 @@ class CMLayer(GenericModel):
         pass
 
     def on_distance(self, dist_msg: DistanceMessage):
+        """
+        Upon a distance report, if it indicates a shorter path, the receiver
+        updates its shortest distance and reports this update to its neighbors.
+        If there is no neighbor, immediately sends an acknowledgement to the sender, otherwise
+        acknowledgement is sent from "on_acknowledgement" handler.
+        If it is not a shorter path, the receiver sends an acknowledgement to the sender.
+        """
         # TODO Use locks
         distance_in_msg = dist_msg.payload.messagepayload
         if distance_in_msg < self.distance:
@@ -74,12 +99,21 @@ class CMLayer(GenericModel):
             self.send_acknowledgement_msg(dist_msg.header.messagefrom)
 
     def on_acknowledgement(self, msg: AcknowledgementMessage):
+        """
+        Indicates that a neighbor has completed processing of a distance report.
+
+        If no other acknowledgement message is expected, sends an
+        acknowledgement to the predecessor.
+        """
         # TODO Use locks
         self.num -= 1
         if self.num == 0:
             self.send_acknowledgement_msg(self.predecessor_instance_number)
 
     def make_msg_header(self, destination_instance_number):
+        """
+        Calculates next hop and prepares message header accordingly.
+        """
         # TODO
         nexthop = MessageDestinationIdentifiers.LINKLAYERBROADCAST
         interface_id = float("inf")  # self.uniquebroadcastidentifier
@@ -94,11 +128,19 @@ class CMLayer(GenericModel):
         return hdr
 
     def send_distance_msg(self, destination_instance_number, distance):
+        """
+        Sends distance message to the neighbor with id 
+        `destination_instance_number`
+        """
         hdr = self.make_msg_header(destination_instance_number)
         msg = DistanceMessage(hdr, distance)
         self.send_down(Event(self, EventTypes.MFRT, msg))
 
     def send_acknowledgement_msg(self, destination_instance_number):
+        """
+        Sends acknowledgement message to the neighbor with id 
+        `destination_instance_number`
+        """
         hdr = self.make_msg_header(destination_instance_number)
         msg = AcknowledgementMessage(hdr)
         self.send_down(Event(self, EventTypes.MFRT, msg))
@@ -129,6 +171,9 @@ class CMLayer(GenericModel):
 
 
 class CMLayerDestination(CMLayer):
+    """
+    Implements Chandy-Misra layer functionality for the destination component.
+    """
     # FIXME May need to override __init__ to override dist/ack message handlers
 
     def initiate_phase_one(self):
@@ -166,6 +211,9 @@ class CMLayerDestination(CMLayer):
 
 
 class CMNode(GenericModel):
+    """
+    Initializes a Chandy-Misra node with application, Chandy-Misra, and link layers.
+    """
     def __init__(self, componentname, componentid):
         # SUBCOMPONENTS
         self.applicationlayer = GenericApplicationLayer(
@@ -191,7 +239,13 @@ class CMNode(GenericModel):
         super().__init__(componentname, componentid)
 
     def on_message_from_top(self, eventobj: Event):
+        """
+        Forwards messages from top to down.
+        """
         self.send_down(Event(self, EventTypes.MFRT, eventobj.eventcontent))
 
     def on_message_from_bottom(self, eventobj: Event):
+        """
+        Forwards messages from bottom to up.
+        """
         self.send_up(Event(self, EventTypes.MFRB, eventobj.eventcontent))

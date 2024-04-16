@@ -5,6 +5,5 @@ Code Documentation
    :toctree: generated
    :recursive:
 
-   Snapshot.Snapshot
-   Snapshot.ChandyLamportSnapshot
-   Snapshot.LaiYangSnapshot
+   cmrouting.chandymisra
+   msrouting.merlinsegall

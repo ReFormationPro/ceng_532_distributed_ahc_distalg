@@ -17,7 +17,7 @@ Algorithms
    docs/cmrouting/cmrouting
    docs/msrouting/msrouting
    docs/rubric
-   docs/cmrouting/code
+   docs/code
 
 .. ATTENTION::
    For RST details, please refer to `reStructuredText Documentation <https://docutils.sourceforge.io/rst.html>`_.
