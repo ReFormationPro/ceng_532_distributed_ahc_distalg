@@ -19,6 +19,14 @@ class CMMessageType(Enum):
     """
     Reports the end of processing of a distance report.
     """
+    OVER_QM = "OVER_QM"
+    """
+    An "over?" message for positive algorithm termination inquiry.
+    """
+    OVER_NEG = "OVER_NEG"
+    """
+    An "over-" message for negative algorithm termination inquiry.
+    """
 
 
 class DistanceMessage(GenericMessage):
@@ -37,6 +45,22 @@ class AcknowledgementMessage(GenericMessage):
         super(header, GenericMessagePayload(None))
 
 
+class OverQMMessage(GenericMessage):
+    """
+    Initially sent by the sink for positive termination inquiry. 
+    """
+    def __init__(self, header: GenericMessageHeader):
+        super(header, GenericMessagePayload(None))
+
+
+class OverNegMessage(GenericMessage):
+    """
+    Termination message sent upon detection of a negative cycle. 
+    """
+    def __init__(self, header: GenericMessageHeader):
+        super(header, GenericMessagePayload(None))
+
+
 class CMLayer(GenericModel):
     """
     Implements Chandy-Misra layer of the routing.
@@ -47,9 +71,14 @@ class CMLayer(GenericModel):
         self.distance: float = float('inf')
         self.predecessor_instance_number: int = -1
         self.num: int = 0
+        # NOTE Paper is unclear on termination, so I added this
+        # See the note on "initiate_phase_two"
+        self.overqm_msgs_sent: bool = False
 
         self.eventhandlers[CMMessageType.DISTANCE] = self.on_distance
         self.eventhandlers[CMMessageType.ACKNOWLEDGEMENT] = self.on_acknowledgement
+        self.eventhandlers[CMMessageType.OVER_QM] = self.on_overqm
+        self.eventhandlers[CMMessageType.OVER_NEG] = self.on_overneg
         self.eventhandlers[EventTypes.INIT] = self.on_init
 
     def on_init(self, eventobj: Event):
@@ -110,6 +139,12 @@ class CMLayer(GenericModel):
         self.num -= 1
         if self.num == 0:
             self.send_acknowledgement_msg(self.predecessor_instance_number)
+    
+    def on_overqm(self, msg: OverQMMessage):
+        self.initiate_phase_two(True)
+
+    def on_overneg(self, msg: OverNegMessage):
+        self.initiate_phase_two(False)
 
     def make_msg_header(self, destination_instance_number):
         """
@@ -145,6 +180,22 @@ class CMLayer(GenericModel):
         hdr = self.make_msg_header(destination_instance_number)
         msg = AcknowledgementMessage(hdr)
         self.send_down(Event(self, EventTypes.MFRT, msg))
+    
+    def send_overqm_msg(self, destination_instance_number):
+        """
+        Send an "over?" message to the given node.
+        """
+        hdr = self.make_msg_header(destination_instance_number)
+        msg = OverQMMessage(hdr)
+        self.send_down(Event(self, EventTypes.MFRT, msg))
+    
+    def send_overneg_msg(self, destination_instance_number):
+        """
+        Send an "over-" message to the given node.
+        """
+        hdr = self.make_msg_header(destination_instance_number)
+        msg = OverNegMessage(hdr)
+        self.send_down(Event(self, EventTypes.MFRT, msg))
 
     def initiate_phase_two(self, success: bool):
         """
@@ -155,20 +206,34 @@ class CMLayer(GenericModel):
         if self.num > 0:
             if self.distance != float("-inf"):
                 self.distance = float("-inf")
-                # TODO Send over- to all neighbors
-                pass
+                # Send over- to all neighbors
+                neighbors = Topology().get_neighbors(self.componentinstancenumber)
+                for n in neighbors:
+                    self.send_overneg_msg(n)
         elif self.num == 0:
             if not success:
                 # num == 0 and over- is recv
                 if self.distance != float("-inf"):
                     self.distance = float("-inf")
-                    # TODO Send over- to all neighbors
-                    pass
+                    # Send over- to all neighbors
+                    neighbors = Topology().get_neighbors(self.componentinstancenumber)
+                    for n in neighbors:
+                        self.send_overneg_msg(n)
             else:
                 # num == 0 and over? is recv
                 if self.distance != float("-inf"):
-                    # TODO Send over? to all neighbors who have not received such a msg
-                    pass
+                    # Send over? to all neighbors who have not received such a msg
+
+                    # NOTE It is unclear how the authors expect to know "who have
+                    # not received such a msg" at this point so I just send it to
+                    # everyone once here.
+                    if self.overqm_msgs_sent:
+                       return
+                    
+                    neighbors = Topology().get_neighbors(self.componentinstancenumber)
+                    for n in neighbors:
+                        self.send_overqm_msg(n)
+                    self.overqm_msgs_sent = True
 
 
 class CMLayerDestination(CMLayer):
@@ -191,7 +256,6 @@ class CMLayerDestination(CMLayer):
         if distance_in_msg < 0:
             # Negative cycle
             self.initiate_phase_two(False)
-            pass
         else:
             self.send_acknowledgement_msg(dist_msg.header.messagefrom)
 
@@ -202,13 +266,32 @@ class CMLayerDestination(CMLayer):
             # Terminate phase 1, start phase 2
             self.initiate_phase_two(True)
 
+    def on_overqm(self, msg: OverQMMessage):
+        # NOTE Not in paper. Perhaps this means do nothing.
+        # OverQM message is first sent by the destination node so
+        # we should do nothing here.
+        pass
+
+    def on_overneg(self, msg: OverNegMessage):
+        # NOTE Not in paper. Perhaps this means do nothing.
+        # This means that a negative cycle is detected.
+        # If we do not send an overneg message here,
+        # some nodes may never get this message. However,
+        # they would still terminate with "over?" msgs. 
+        # So I chose to do nothing.
+        pass
+
     def initiate_phase_two(self, success: bool):
         if success:
-            # TODO Send over? msgs to all neigbors
-            pass
+            # Send over? msgs to all neighbors
+            neighbors = Topology().get_neighbors(self.componentinstancenumber)
+            for n in neighbors:
+                self.send_overqm_msg(n)
         else:
-            # TODO Send over- msgs to all neighbors
-            pass
+            # Send over- msgs to all neighbors
+            neighbors = Topology().get_neighbors(self.componentinstancenumber)
+            for n in neighbors:
+                self.send_overneg_msg(n)
 
 
 class CMNode(GenericModel):
