@@ -1,11 +1,16 @@
 from adhoccomputing.GenericModel import Topology, GenericModel, Event, EventTypes, ConnectorTypes, GenericMessage, GenericMessagePayload, GenericMessageHeader, MessageDestinationIdentifiers
 # from adhoccomputing.DistributedAlgorithms.Broadcasting import BroadcastingMessageHeader
 # from adhoccomputing.Networking.LogicalChannels import GenericChannel
-from adhoccomputing.Networking.LinkLayer import GenericLinkLayer
-from adhoccomputing.Networking.ApplicationLayer import GenericApplicationLayer
+from adhoccomputing.Networking.LinkLayer.GenericLinkLayer import GenericLinkLayer, LinkLayerMessageTypes
+from adhoccomputing.Networking.ApplicationLayer.GenericApplicationLayer import GenericApplicationLayer, ApplicationLayerMessageTypes, ApplicationLayerMessageHeader, ApplicationLayerMessagePayload
 from enum import Enum
+import logging
+from threading import Lock
 
-# TODO Implement over- and over? message handlers, message types etc.
+logger = logging.getLogger("AHC-CM")
+logger.setLevel(logging.DEBUG)
+# logging.basicConfig(level=logging.INFO)
+logging.basicConfig()
 
 class CMMessageType(Enum):
     """
@@ -34,7 +39,7 @@ class DistanceMessage(GenericMessage):
     Carries distance of a node to the destination.
     """
     def __init__(self, header: GenericMessageHeader, distance: float):
-        super(header, GenericMessagePayload(distance))
+        super().__init__(header, GenericMessagePayload(distance))
 
 
 class AcknowledgementMessage(GenericMessage):
@@ -42,7 +47,7 @@ class AcknowledgementMessage(GenericMessage):
     Reports the end of processing of a distance report. 
     """
     def __init__(self, header: GenericMessageHeader):
-        super(header, GenericMessagePayload(None))
+        super().__init__(header, GenericMessagePayload(None))
 
 
 class OverQMMessage(GenericMessage):
@@ -50,7 +55,7 @@ class OverQMMessage(GenericMessage):
     Initially sent by the sink for positive termination inquiry. 
     """
     def __init__(self, header: GenericMessageHeader):
-        super(header, GenericMessagePayload(None))
+        super().__init__(header, GenericMessagePayload(None))
 
 
 class OverNegMessage(GenericMessage):
@@ -58,19 +63,73 @@ class OverNegMessage(GenericMessage):
     Termination message sent upon detection of a negative cycle. 
     """
     def __init__(self, header: GenericMessageHeader):
-        super(header, GenericMessagePayload(None))
+        super().__init__(header, GenericMessagePayload(None))
+
+
+class CMLinkLayer(GenericLinkLayer):
+    def on_message_from_top(self, eventobj: Event):
+        #logger.info(f"{self.componentname}-{self.componentinstancenumber} RECEIVED FROM TOP {str(eventobj)}")
+        abovehdr = eventobj.eventcontent.header
+        if abovehdr.messageto == MessageDestinationIdentifiers.NETWORKLAYERBROADCAST:
+            hdr = GenericMessageHeader(LinkLayerMessageTypes.LINKMSG, self.componentinstancenumber, abovehdr.nexthop,
+                                        MessageDestinationIdentifiers.LINKLAYERBROADCAST,nexthop=MessageDestinationIdentifiers.LINKLAYERBROADCAST)
+        else:
+            #if we do not broadcast, use nexthop to determine interfaceid and set hdr.interfaceid
+            myinterfaceid = str(self.componentinstancenumber) + "-" + str(abovehdr.nexthop)
+            hdr = GenericMessageHeader(LinkLayerMessageTypes.LINKMSG, self.componentinstancenumber,
+                                        abovehdr.nexthop, nexthop=abovehdr.nexthop, interfaceid=myinterfaceid)
+
+        payload = eventobj.eventcontent
+        msg = GenericMessage(hdr, payload)
+        self.send_down(Event(self, EventTypes.MFRT, msg))
+
+
+class CMApplicationLayer(GenericApplicationLayer):
+    """
+    Implements necessary functionality for a minimal application layer
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.eventhandlers[ApplicationLayerMessageTypes.PROPOSE] = self.on_propose
+        self.eventhandlers[ApplicationLayerMessageTypes.ACCEPT] = self.on_accept
+        
+    def on_init(self, eventobj: Event):
+        logger.debug(f"Initializing {self.componentname}.{self.componentinstancenumber}")
+
+        if self.componentinstancenumber == 0:
+            # destination = random.randint(len(Topology.G.nodes))
+            destination = 1
+            hdr = ApplicationLayerMessageHeader(ApplicationLayerMessageTypes.PROPOSE, self.componentinstancenumber,
+                                                destination)
+            payload = ApplicationLayerMessagePayload("23")
+            proposalmessage = GenericMessage(hdr, payload)
+            # randdelay = random.randint(0, 5)
+            # time.sleep(randdelay)
+            self.send_self(Event(self, ApplicationLayerMessageTypes.PROPOSE, proposalmessage))
+        else:
+            pass
+
+    def on_propose(self, eventobj: Event):
+        logger.debug(f"CMAppL on propose {eventobj}")
+
+    def on_accept(self, eventobj: Event):
+        logger.debug(f"CMAppL on accept {eventobj}")
 
 
 class CMLayer(GenericModel):
     """
     Implements Chandy-Misra layer of the routing.
     """
-    def __init__(self, componentname, componentinstancenumber):
-        super().__init__(componentname, componentinstancenumber)
+    LAYERS = []
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        CMLayer.LAYERS.append(self)
 
         self.distance: float = float('inf')
         self.predecessor_instance_number: int = -1
         self.num: int = 0
+        self.num_lock = Lock()
         # NOTE Paper is unclear on termination, so I added this
         # See the note on "initiate_phase_two"
         self.overqm_msgs_sent: bool = False
@@ -82,13 +141,15 @@ class CMLayer(GenericModel):
         self.eventhandlers[EventTypes.INIT] = self.on_init
 
     def on_init(self, eventobj: Event):
-        pass
+        logger.info(f"Initializing {self.componentname} - {self.componentinstancenumber}")
 
     def on_message_from_top(self, eventobj: Event):
         """
         Forward application layer message over chandy-misra layer
         """
-        pass
+        logger.debug(f"Message from app layer: {eventobj.eventcontent}")
+        # TODO Route it
+        self.send_down(eventobj)
 
     def on_message_from_bottom(self, eventobj: Event):
         """
@@ -96,9 +157,23 @@ class CMLayer(GenericModel):
         - This node has registered to the even type, and
         - This node is the target.
         """
-        pass
+        try:
+            hdr = eventobj.eventcontent.header
+            if hdr.messagetype == CMMessageType.DISTANCE:
+                self.send_self(Event(self, CMMessageType.DISTANCE, eventobj.eventcontent))
+            elif hdr.messagetype == CMMessageType.ACKNOWLEDGEMENT:
+                self.send_self(Event(self, CMMessageType.ACKNOWLEDGEMENT, eventobj.eventcontent))
+            elif hdr.messagetype == CMMessageType.OVER_NEG:
+                self.send_self(Event(self, CMMessageType.OVER_NEG, eventobj.eventcontent))
+            elif hdr.messagetype == CMMessageType.OVER_QM:
+                self.send_self(Event(self, CMMessageType.OVER_QM, eventobj.eventcontent))
+            else:
+                # TODO
+                self.send_up(eventobj)
+        except AttributeError:
+            logger.critical("Attribute Error")
 
-    def on_distance(self, dist_msg: DistanceMessage):
+    def on_distance(self, eventobj: Event):
         """
         Upon a distance report, if it indicates a shorter path, the receiver
         updates its shortest distance and reports this update to its neighbors.
@@ -106,7 +181,7 @@ class CMLayer(GenericModel):
         acknowledgement is sent from "on_acknowledgement" handler.
         If it is not a shorter path, the receiver sends an acknowledgement to the sender.
         """
-        # TODO Use locks
+        dist_msg: DistanceMessage = eventobj.eventcontent
         distance_in_msg = dist_msg.payload.messagepayload
         if distance_in_msg < self.distance:
             if self.num > 0:
@@ -115,48 +190,50 @@ class CMLayer(GenericModel):
             self.predecessor_instance_number = dist_msg.header.messagefrom
             self.distance = distance_in_msg
             # Send distance msgs to all neighbors
-            neighbors = Topology().get_neighbors(self.componentinstancenumber)
+            neighbors = self.topology.get_neighbors(self.componentinstancenumber)
             for n in neighbors:
                 # None
-                estimated_distance = None
+                estimated_distance = self.topology.G.get_edge_data(self.componentinstancenumber, n)['weight']
                 self.send_distance_msg(n, estimated_distance)
-            self.num += len(neighbors)
-            # Send ack if we are done
-            if self.num == 0:
-                self.send_acknowledgement_msg(self.predecessor_instance_number)
+            with self.num_lock:
+                self.num += len(neighbors)
+                # Send ack if we are done
+                if self.num == 0:
+                    self.send_acknowledgement_msg(self.predecessor_instance_number)
         else:
             # Useless, just finish it
             self.send_acknowledgement_msg(dist_msg.header.messagefrom)
 
-    def on_acknowledgement(self, msg: AcknowledgementMessage):
+    def on_acknowledgement(self, eventobj: Event):
         """
         Indicates that a neighbor has completed processing of a distance report.
 
         If no other acknowledgement message is expected, sends an
         acknowledgement to the predecessor.
         """
-        # TODO Use locks
-        self.num -= 1
-        if self.num == 0:
-            self.send_acknowledgement_msg(self.predecessor_instance_number)
+        with self.num_lock:
+            self.num -= 1
+            if self.num == 0:
+                self.send_acknowledgement_msg(self.predecessor_instance_number)
     
-    def on_overqm(self, msg: OverQMMessage):
+    def on_overqm(self, eventobj: Event):
         self.initiate_phase_two(True)
 
-    def on_overneg(self, msg: OverNegMessage):
+    def on_overneg(self, eventobj: Event):
         self.initiate_phase_two(False)
 
     def make_msg_header(self, destination_instance_number):
         """
         Calculates next hop and prepares message header accordingly.
+        Message type needs to be set by the caller.
         """
         # TODO
-        nexthop = MessageDestinationIdentifiers.LINKLAYERBROADCAST
+        nexthop = destination_instance_number # TODO
         interface_id = float("inf")  # self.uniquebroadcastidentifier
         hdr = GenericMessageHeader(
-            CMMessageType.DISTANCE,
+            None,
             self.componentinstancenumber,
-            destination_instance_number,
+            MessageDestinationIdentifiers.LINKLAYERBROADCAST,
             nexthop,
             interface_id,
             # sequence_number
@@ -169,6 +246,7 @@ class CMLayer(GenericModel):
         `destination_instance_number`
         """
         hdr = self.make_msg_header(destination_instance_number)
+        hdr.messagetype = CMMessageType.DISTANCE
         msg = DistanceMessage(hdr, distance)
         self.send_down(Event(self, EventTypes.MFRT, msg))
 
@@ -179,6 +257,7 @@ class CMLayer(GenericModel):
         """
         hdr = self.make_msg_header(destination_instance_number)
         msg = AcknowledgementMessage(hdr)
+        hdr.messagetype = CMMessageType.ACKNOWLEDGEMENT
         self.send_down(Event(self, EventTypes.MFRT, msg))
     
     def send_overqm_msg(self, destination_instance_number):
@@ -187,6 +266,7 @@ class CMLayer(GenericModel):
         """
         hdr = self.make_msg_header(destination_instance_number)
         msg = OverQMMessage(hdr)
+        hdr.messagetype = CMMessageType.OVER_QM
         self.send_down(Event(self, EventTypes.MFRT, msg))
     
     def send_overneg_msg(self, destination_instance_number):
@@ -195,6 +275,7 @@ class CMLayer(GenericModel):
         """
         hdr = self.make_msg_header(destination_instance_number)
         msg = OverNegMessage(hdr)
+        hdr.messagetype = CMMessageType.OVER_NEG
         self.send_down(Event(self, EventTypes.MFRT, msg))
 
     def initiate_phase_two(self, success: bool):
@@ -203,20 +284,22 @@ class CMLayer(GenericModel):
         success: True if over? is recevied, 
                  False if over- is received
         """
-        if self.num > 0:
+        with self.num_lock:
+            num = self.num
+        if num > 0:
             if self.distance != float("-inf"):
                 self.distance = float("-inf")
                 # Send over- to all neighbors
-                neighbors = Topology().get_neighbors(self.componentinstancenumber)
+                neighbors = self.topology.get_neighbors(self.componentinstancenumber)
                 for n in neighbors:
                     self.send_overneg_msg(n)
-        elif self.num == 0:
+        elif num == 0:
             if not success:
                 # num == 0 and over- is recv
                 if self.distance != float("-inf"):
                     self.distance = float("-inf")
                     # Send over- to all neighbors
-                    neighbors = Topology().get_neighbors(self.componentinstancenumber)
+                    neighbors = self.topology.get_neighbors(self.componentinstancenumber)
                     for n in neighbors:
                         self.send_overneg_msg(n)
             else:
@@ -230,7 +313,7 @@ class CMLayer(GenericModel):
                     if self.overqm_msgs_sent:
                        return
                     
-                    neighbors = Topology().get_neighbors(self.componentinstancenumber)
+                    neighbors = self.topology.get_neighbors(self.componentinstancenumber)
                     for n in neighbors:
                         self.send_overqm_msg(n)
                     self.overqm_msgs_sent = True
@@ -240,18 +323,24 @@ class CMLayerDestination(CMLayer):
     """
     Implements Chandy-Misra layer functionality for the destination component.
     """
-    # FIXME May need to override __init__ to override dist/ack message handlers
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def on_init(self, eventobj: Event):
+        logger.info(f"Initializing {self.componentname} Destination Node - {self.componentinstancenumber}")
+        self.initiate_phase_one()
 
     def initiate_phase_one(self):
         self.distance = 0
         self.predecessor_instance_number = -1
-        neighbors = Topology().get_neighbors(self.componentinstancenumber)
+        neighbors = self.topology.get_neighbors(self.componentinstancenumber)
         self.num = len(neighbors)
         for n in neighbors:
-            estimated_distance = None  # TODO
+            estimated_distance = self.topology.G.get_edge_data(self.componentinstancenumber, n)['weight']
             self.send_distance_msg(n, estimated_distance)
 
-    def on_distance(self, dist_msg: DistanceMessage):
+    def on_distance(self, eventobj: Event):
+        dist_msg: DistanceMessage = eventobj.eventcontent
         distance_in_msg = dist_msg.payload.messagepayload
         if distance_in_msg < 0:
             # Negative cycle
@@ -259,20 +348,21 @@ class CMLayerDestination(CMLayer):
         else:
             self.send_acknowledgement_msg(dist_msg.header.messagefrom)
 
-    def on_acknowledgement(self, msg: AcknowledgementMessage):
-        # TODO Use locks
-        self.num -= 1
-        if self.num == 0:
-            # Terminate phase 1, start phase 2
-            self.initiate_phase_two(True)
+    def on_acknowledgement(self, eventobj: Event):
+        msg: AcknowledgementMessage = eventobj.eventcontent
+        with self.num_lock:
+            self.num -= 1
+            if self.num == 0:
+                # Terminate phase 1, start phase 2
+                self.initiate_phase_two(True)
 
-    def on_overqm(self, msg: OverQMMessage):
+    def on_overqm(self, eventobj: Event):
         # NOTE Not in paper. Perhaps this means do nothing.
         # OverQM message is first sent by the destination node so
         # we should do nothing here.
         pass
 
-    def on_overneg(self, msg: OverNegMessage):
+    def on_overneg(self, eventobj: Event):
         # NOTE Not in paper. Perhaps this means do nothing.
         # This means that a negative cycle is detected.
         # If we do not send an overneg message here,
@@ -284,12 +374,12 @@ class CMLayerDestination(CMLayer):
     def initiate_phase_two(self, success: bool):
         if success:
             # Send over? msgs to all neighbors
-            neighbors = Topology().get_neighbors(self.componentinstancenumber)
+            neighbors = self.topology.get_neighbors(self.componentinstancenumber)
             for n in neighbors:
                 self.send_overqm_msg(n)
         else:
             # Send over- msgs to all neighbors
-            neighbors = Topology().get_neighbors(self.componentinstancenumber)
+            neighbors = self.topology.get_neighbors(self.componentinstancenumber)
             for n in neighbors:
                 self.send_overneg_msg(n)
 
@@ -298,32 +388,41 @@ class CMNode(GenericModel):
     """
     Initializes a Chandy-Misra node with application, Chandy-Misra, and link layers.
     """
-    def __init__(self, componentname, componentid, is_destination_node = False):
+    def initialize_subcomponents(self, is_destination_node = False):
+        """
+        Initializes subcomponents.
+
+        is_destination_node: When true, cmservice is a CMLayerDestination instance.
+        Otherwise, CMLayer instance.
+        """
         # SUBCOMPONENTS
-        self.applicationlayer = GenericApplicationLayer(
-            "ApplicationLayer", componentid)
+        self.applicationlayer = CMApplicationLayer(
+            "ApplicationLayer", self.componentinstancenumber, topology=self.topology)
         if is_destination_node:
-            self.cmservice = CMLayerDestination("CMLayer", componentid)
+            self.cmservice = CMLayerDestination("CMLayer", self.componentinstancenumber, topology=self.topology)
         else:
-            self.cmservice = CMLayer("CMLayer", componentid)
-        self.linklayer = GenericLinkLayer("LinkLayer", componentid)
+            self.cmservice = CMLayer("CMLayer", self.componentinstancenumber, topology=self.topology)
+        self.linklayer = CMLinkLayer("LinkLayer", self.componentinstancenumber, topology=self.topology)
+        self.components.append(self.applicationlayer)
+        self.components.append(self.cmservice)
+        self.components.append(self.linklayer)
 
         # CONNECTIONS AMONG SUBCOMPONENTS
         self.applicationlayer.connect_me_to_component(
             ConnectorTypes.DOWN, self.cmservice)
         self.cmservice.connect_me_to_component(
             ConnectorTypes.UP, self.applicationlayer)
-
         self.cmservice.connect_me_to_component(
             ConnectorTypes.DOWN, self.linklayer)
         self.linklayer.connect_me_to_component(
             ConnectorTypes.UP, self.cmservice)
-
+        
         # Connect the bottom component to the composite component....
         self.linklayer.connect_me_to_component(ConnectorTypes.DOWN, self)
         self.connect_me_to_component(ConnectorTypes.UP, self.linklayer)
 
-        super().__init__(componentname, componentid)
+    def on_init(self, eventobj: Event):
+        logger.info(f"Initializing {self.componentname} - {self.componentinstancenumber}")
 
     def on_message_from_top(self, eventobj: Event):
         """
