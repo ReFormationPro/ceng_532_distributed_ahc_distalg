@@ -6,7 +6,15 @@ Implementation, Results and Discussion
 Implementation and Methodology
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-TODO After implementation
+..
+  TODO After implementation
+
+
+The pseudocode and the explanations were quite easy to follow. Although we had a couple of uncertainties we needed to figure out ourselves. Here is a list of them:
+
+- The paper says "over?" messages should be sent to those who have not received such a message. This cannot be known by the nodes themselves and attempting to learn this by asking is inefficient. Instead, in our implementation a "overqm_msgs_sent" flag is used to indicate whether this "over?" message is sent to all of the neighbors or not is stored. This flag is initially false and when the node sends "over?" messages to all its neighbors, it is set to true. Thus, "over?" messages are only sent once. Since if a node receives "over?" message twice, the second one just gets ignored, this solves the issue quite nicely.
+- Similarly, the paper does not mention how to handle "over?" and "over-" messages by the destination node. "over?" message is initially sent by the destination node so it does not make sense to handle such messages, thus we left its handler empty. Similarly, the behaviour of "over-" message handler was not mentioned. Two meaningful solutions exist: Leaving it empty or forwarding it to neighbors once. After a careful examination of both ways, we noticed that the algorithm terminates the either way. So we went with the simpler one, ignoring it.
+
 
 ..
   Writing the methodology lies at the core of the paper, and fulfills one of the basic principles underlying the scientific method. Any scientific paper needs to be verifiable by other researchers, so that they can review the results by replicating the experiment and guaranteeing the validity. To assist this, you need to give a completely accurate description of the equipment and the techniques used for gathering the data [Shuttleworth2016]_.

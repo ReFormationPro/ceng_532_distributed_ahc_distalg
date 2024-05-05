@@ -24,6 +24,7 @@ Our primary contributions consist of the following:
 
 - Providing an implementation of Chandy-Misra algorithm on AHCv2
 - Demonstrating the algorithm on application, Chandy-Misra overlay, and link layers
+- By discussing implementation issues, we are helping others to understand the paper and the algorithm and with creating new implementations.
 
 More contributions will be added after tests.
 

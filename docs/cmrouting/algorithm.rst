@@ -20,8 +20,6 @@ They report the synchronous version has O(\|V\|\|E\|) message complexity and O(\
 Then, they combine the algorithm with a synchronizer to create an asynchronous protocol with the same complexities. 
 The synchronizer has O(m) message complexity and O(1) time complexity overhead.
 
-TODO Add new papers
-
 
 Distributed Algorithm: |CMRouting| 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
