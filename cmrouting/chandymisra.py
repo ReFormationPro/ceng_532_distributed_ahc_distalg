@@ -187,13 +187,14 @@ class CMLayer(GenericModel):
             if self.num > 0:
                 # Send ack
                 self.send_acknowledgement_msg(self.predecessor_instance_number)
+            logger.info(f"{self.componentname}-{self.componentinstancenumber} has set their predecessor from {self.predecessor_instance_number} to {dist_msg.header.messagefrom} because new distance is {distance_in_msg}, shorter than {self.distance}")
             self.predecessor_instance_number = dist_msg.header.messagefrom
             self.distance = distance_in_msg
             # Send distance msgs to all neighbors
             neighbors = self.topology.get_neighbors(self.componentinstancenumber)
             for n in neighbors:
                 # None
-                estimated_distance = self.topology.G.get_edge_data(self.componentinstancenumber, n)['weight']
+                estimated_distance = self.distance + self.topology.G.get_edge_data(self.componentinstancenumber, n)['weight']
                 self.send_distance_msg(n, estimated_distance)
             with self.num_lock:
                 self.num += len(neighbors)
@@ -284,6 +285,7 @@ class CMLayer(GenericModel):
         success: True if over? is recevied, 
                  False if over- is received
         """
+        logger.info(f"{self.componentname}-{self.componentinstancenumber} has initiated phase two with {success}")
         with self.num_lock:
             num = self.num
         if num > 0:
@@ -372,6 +374,7 @@ class CMLayerDestination(CMLayer):
         pass
 
     def initiate_phase_two(self, success: bool):
+        logger.info(f"Destination node {self.componentname}-{self.componentinstancenumber} has initiated phase two with {success}")
         if success:
             # Send over? msgs to all neighbors
             neighbors = self.topology.get_neighbors(self.componentinstancenumber)
