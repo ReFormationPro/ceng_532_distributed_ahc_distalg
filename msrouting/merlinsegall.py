@@ -4,6 +4,11 @@ from adhoccomputing.GenericModel import Topology, GenericModel, Event, EventType
 from adhoccomputing.Networking.LinkLayer import GenericLinkLayer
 from adhoccomputing.Networking.ApplicationLayer import GenericApplicationLayer
 from enum import Enum
+import os
+import sys
+sys.path.insert(0, os.path.abspath('..'))
+
+from common import *
 
 class MSMessageType(Enum):
     """
@@ -26,46 +31,63 @@ class MSMessageType(Enum):
     Indicated that a new link is available
     """
 
+
 class MSLinkStatus(Enum):
     DOWN = "MS_DOWN"
     READY = "MS_READY"
     UP = "MS_UP"
 
+
 class FailureMessage(GenericMessage):
+    """
+    Indicates a link failure, ie. a link is now down, unusable.
+    """
+
     def __init__(self, header: GenericMessageHeader, sender_id: int):
-        super(header, GenericMessagePayload(sender_id))
+        super().__init__(header, GenericMessagePayload(sender_id))
+
 
 class DistanceMessage(GenericMessage):
     """
     Carries cycle number, distance and id of the sender.
     Receiver updates their distance table with the sender distance.
     """
+
     def __init__(self, header: GenericMessageHeader, 
                  sender_cycle_number: int, 
                  sender_distance: float, 
                  sender_id: int):
-        super(header, GenericMessagePayload({sender_cycle_number, sender_distance, sender_id}))
+        super().__init__(header, GenericMessagePayload({sender_cycle_number, sender_distance, sender_id}))
+
 
 class WakeMessage(GenericMessage):
     """
     Indicates that a new link is available
     """
+
     def __init__(self, header: GenericMessageHeader, sender_id: int):
-        super(header, GenericMessagePayload(sender_id))
+        super().__init__(header, GenericMessagePayload(sender_id))
+
 
 class RequestMessage(GenericMessage):
     """
     Request for a new update cycle
     """
+
     def __init__(self, header: GenericMessageHeader, sender_cycle_number: int):
-        super(header, GenericMessagePayload(sender_cycle_number))
+        super().__init__(header, GenericMessagePayload(sender_cycle_number))
 
 class MSLayer(GenericModel):
     """
     Implements the Merlin-Segall layer functionality for non-destination component.
     """
+
+    LAYERS = []
+
     def __init__(self, componentname, componentinstancenumber):
         super().__init__(componentname, componentinstancenumber)
+
+        MSLayer.LAYERS.append(self)
 
         self.predecessor_instance_number: int = -1  # p_i
         self.distance: float = float('inf')         # d_i
@@ -85,17 +107,17 @@ class MSLayer(GenericModel):
         self.eventhandlers[MSMessageType.WAKE] = self.on_wake
         self.eventhandlers[EventTypes.INIT] = self.on_init
     
-    def on_init(self, init_event: Event):
+    def on_init(self, eventobj: Event):
         """
         Non-destination nodes do not use this event.
         """
         pass
 
-    def on_distance(self, distance_event: Event):
+    def on_distance(self, eventobj: Event):
         """
         Updates distance table
         """
-        distance_msg = distance_event.eventcontent
+        distance_msg = eventobj.eventcontent
         sender_cycle_number, sender_distance, sender_id = distance_msg.payload.messagepayload
         if self.link_status[sender_id].get() == MSLinkStatus.READY:
             self.link_status[sender_id] = MSLinkStatus.UP
@@ -104,29 +126,29 @@ class MSLayer(GenericModel):
         link_weigth = 0 # TODO Estiamte link weight
         self.distance_table[sender_id] = sender_distance + link_weigth
         self.maximum_received_cycle_number = max(self.maximum_received_cycle_number, sender_cycle_number)
-        # TODO Run FSM
+        self.execute_fsm()
         
-    def on_fail(self, fail_event: Event):
+    def on_fail(self, eventobj: Event):
         """
         Handles link failure by sending a new update cycle request.
         """
-        fail_msg = fail_event.eventcontent
+        fail_msg = eventobj.eventcontent
         sender_id = fail_msg.payload.messagepayload
         self.link_status[sender_id] = MSLinkStatus.DOWN
-        # TODO Execute FSM
+        self.execute_fsm()
         if self.predecessor_instance_number != None:
             self.send_req(self.predecessor_instance_number, self.curr_cycle_number)
         
-    def on_req(self, req_event: Event):
+    def on_req(self, eventobj: Event):
         """
         Forwards update cycle requests.
         """
-        req_msg = req_event.eventcontent
+        req_msg = eventobj.eventcontent
         sender_cycle_number = req_msg.payload.messagepayload
         if self.predecessor_instance_number != None:
             self.send_req(self.predecessor_instance_number, sender_cycle_number)
         
-    def on_wake(self, wake_event: Event):
+    def on_wake(self, eventobj: Event):
         """
         TODO Pseudo-code has unclear comments. Needs to determine how it
         will be implemented.
@@ -141,6 +163,11 @@ class MSLayer(GenericModel):
         """
         pass
 
+    def execute_fsm(self):
+        # TODO
+        pass
+
+
 class MSLayerDestination(MSLayer):
     """
     Merlin-Segall layer implementation for the destination node.
@@ -148,41 +175,43 @@ class MSLayerDestination(MSLayer):
     TODO: Heavily depends on FSM. Implement FSM.
     """
     
-    def on_init(self, init_event: Event):
+    def on_init(self, eventobj: Event):
         """
-        Executes FSM.
+        Executes FSM for the first time.
         """
         self.CT = 0
-        # TODO Execute FSM
+        self.execute_fsm()
+        # TODO FSM is not implemented so I try to imitiate its behaviour here
 
-    def on_distance(self, distance_event: Event):
+
+    def on_distance(self, eventobj: Event):
         """
         Updates last received cycle number and runs FSM
         """
-        distance_msg = distance_event.eventcontent
+        distance_msg = eventobj.eventcontent
         sender_cycle_number, sender_distance, sender_id = distance_msg.payload.messagepayload
         self.last_recevied_cycle_number[sender_id] = sender_cycle_number
         self.CT = 0
-        # TODO Execute FSM
+        self.execute_fsm()
         
-    def on_fail(self, fail_event: Event):
+    def on_fail(self, eventobj: Event):
         """
         Handles link failure by updating link status and running FSM.
         """
-        fail_msg = fail_event.eventcontent
+        fail_msg = eventobj.eventcontent
         sender_id = fail_msg.payload.messagepayload
         self.link_status[sender_id] = MSLinkStatus.DOWN
         self.CT = 0
-        # TODO Execute FSM
+        self.execute_fsm()
         
-    def on_req(self, req_event: Event):
+    def on_req(self, eventobj: Event):
         """
         Handles new cycle requests by running FSM.
         """
         self.CT = 0
-        # TODO Execute FSM
+        self.execute_fsm()
         
-    def on_wake(self, wake_event: Event):
+    def on_wake(self, eventobj: Event):
         """
         TODO Pseudo-code has unclear comments. Needs to determine how it
         will be implemented. 
@@ -191,19 +220,32 @@ class MSLayerDestination(MSLayer):
         # TODO
         pass
 
+    def execute_fsm(self, extra = {}):
+        # TODO FSM logic is too complicated
+        pass
+        # if self.CT == 0 and (extra.get("req", -1) == self.curr_cycle_number or extra.get("fail") or extra.get("wake") or extra.get("start")):
+        #     if extra.get("req", -1) != -1 or extra.get("fail") or extra.get("wake"):
+        #         self.curr_cycle_number += 1
+        #         # Transmit MSG(n_sink, 0) over all UP links
+        #         # TODO
+        #         self.CT = 1
+        
+
+
 class MSNode(GenericModel):
     """
     Initializes a node with application, Merlin-Segall, and link layers.
     """
-    def __init__(self, componentname, componentid, is_destination_node = False):
+
+    def initialize_subcomponents(self, is_destination_node = False):
         # SUBCOMPONENTS
-        self.applicationlayer = GenericApplicationLayer(
-            "ApplicationLayer", componentid)
+        self.applicationlayer = CommonApplicationLayer(
+            "ApplicationLayer", self.componentinstancenumber)
         if is_destination_node:
-            self.msservice = MSLayerDestination("MSLayer", componentid)
+            self.msservice = MSLayerDestination("MSLayer", self.componentinstancenumber)
         else:
-            self.msservice = MSLayer("MSLayer", componentid)
-        self.linklayer = GenericLinkLayer("LinkLayer", componentid)
+            self.msservice = MSLayer("MSLayer", self.componentinstancenumber)
+        self.linklayer = CommonLinkLayer("LinkLayer", self.componentinstancenumber)
 
         # CONNECTIONS AMONG SUBCOMPONENTS
         self.applicationlayer.connect_me_to_component(
@@ -220,10 +262,14 @@ class MSNode(GenericModel):
         self.linklayer.connect_me_to_component(ConnectorTypes.DOWN, self)
         self.connect_me_to_component(ConnectorTypes.UP, self.linklayer)
 
-        super().__init__(componentname, componentid)
-
     def on_message_from_top(self, eventobj: Event):
+        """
+        Forwards the messages from link layer to the component below.
+        """
         self.send_down(Event(self, EventTypes.MFRT, eventobj.eventcontent))
 
     def on_message_from_bottom(self, eventobj: Event):
+        """
+        Forwards messages from the component below to link layer.
+        """
         self.send_up(Event(self, EventTypes.MFRB, eventobj.eventcontent))

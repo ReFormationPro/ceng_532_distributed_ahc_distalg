@@ -7,6 +7,12 @@ from enum import Enum
 import logging
 from threading import Lock
 
+# For common stuff
+import os
+import sys
+sys.path.insert(0, os.path.abspath('..'))
+from common import *
+
 logger = logging.getLogger("AHC-CM")
 logger.setLevel(logging.DEBUG)
 # logging.basicConfig(level=logging.INFO)
@@ -64,56 +70,6 @@ class OverNegMessage(GenericMessage):
     """
     def __init__(self, header: GenericMessageHeader):
         super().__init__(header, GenericMessagePayload(None))
-
-
-class CMLinkLayer(GenericLinkLayer):
-    def on_message_from_top(self, eventobj: Event):
-        #logger.info(f"{self.componentname}-{self.componentinstancenumber} RECEIVED FROM TOP {str(eventobj)}")
-        abovehdr = eventobj.eventcontent.header
-        if abovehdr.messageto == MessageDestinationIdentifiers.NETWORKLAYERBROADCAST:
-            hdr = GenericMessageHeader(LinkLayerMessageTypes.LINKMSG, self.componentinstancenumber, abovehdr.nexthop,
-                                        MessageDestinationIdentifiers.LINKLAYERBROADCAST,nexthop=MessageDestinationIdentifiers.LINKLAYERBROADCAST)
-        else:
-            #if we do not broadcast, use nexthop to determine interfaceid and set hdr.interfaceid
-            myinterfaceid = str(self.componentinstancenumber) + "-" + str(abovehdr.nexthop)
-            hdr = GenericMessageHeader(LinkLayerMessageTypes.LINKMSG, self.componentinstancenumber,
-                                        abovehdr.nexthop, nexthop=abovehdr.nexthop, interfaceid=myinterfaceid)
-
-        payload = eventobj.eventcontent
-        msg = GenericMessage(hdr, payload)
-        self.send_down(Event(self, EventTypes.MFRT, msg))
-
-
-class CMApplicationLayer(GenericApplicationLayer):
-    """
-    Implements necessary functionality for a minimal application layer
-    """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.eventhandlers[ApplicationLayerMessageTypes.PROPOSE] = self.on_propose
-        self.eventhandlers[ApplicationLayerMessageTypes.ACCEPT] = self.on_accept
-        
-    def on_init(self, eventobj: Event):
-        logger.debug(f"Initializing {self.componentname}.{self.componentinstancenumber}")
-
-        if self.componentinstancenumber == 0:
-            # destination = random.randint(len(Topology.G.nodes))
-            destination = 1
-            hdr = ApplicationLayerMessageHeader(ApplicationLayerMessageTypes.PROPOSE, self.componentinstancenumber,
-                                                destination)
-            payload = ApplicationLayerMessagePayload("23")
-            proposalmessage = GenericMessage(hdr, payload)
-            # randdelay = random.randint(0, 5)
-            # time.sleep(randdelay)
-            self.send_self(Event(self, ApplicationLayerMessageTypes.PROPOSE, proposalmessage))
-        else:
-            pass
-
-    def on_propose(self, eventobj: Event):
-        logger.debug(f"CMAppL on propose {eventobj}")
-
-    def on_accept(self, eventobj: Event):
-        logger.debug(f"CMAppL on accept {eventobj}")
 
 
 class CMLayer(GenericModel):
@@ -399,13 +355,13 @@ class CMNode(GenericModel):
         Otherwise, CMLayer instance.
         """
         # SUBCOMPONENTS
-        self.applicationlayer = CMApplicationLayer(
+        self.applicationlayer = CommonApplicationLayer(
             "ApplicationLayer", self.componentinstancenumber, topology=self.topology)
         if is_destination_node:
             self.cmservice = CMLayerDestination("CMLayer", self.componentinstancenumber, topology=self.topology)
         else:
             self.cmservice = CMLayer("CMLayer", self.componentinstancenumber, topology=self.topology)
-        self.linklayer = CMLinkLayer("LinkLayer", self.componentinstancenumber, topology=self.topology)
+        self.linklayer = CommonLinkLayer("LinkLayer", self.componentinstancenumber, topology=self.topology)
         self.components.append(self.applicationlayer)
         self.components.append(self.cmservice)
         self.components.append(self.linklayer)

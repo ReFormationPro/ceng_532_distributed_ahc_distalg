@@ -10,4 +10,7 @@ Conclusion
 
 Chandy-Misra is a very intuitive algorithm with minimal messages types to understand. It uses a modified version of Dijkstra-Schonten's diffusing computations for algorithm termination which is also very intuitive to understand. Its implementation on AHCv2 allowed us to implement the algorithm on top of the link layer.
 
-TODO After implementation
+It is easy to visualize and follow the execution steps of Chandy-Misra. It follows a greedy approach to choose the shortest path while cancelling previously accepted path. Since Chandy-Misra nodes can change paths without synchronization, it may result faster than Merlin-Segall which uses update rounds.
+
+..
+    TODO After implementation

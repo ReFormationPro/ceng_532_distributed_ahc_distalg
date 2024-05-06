@@ -56,7 +56,7 @@ def main():
     # G = nx.connected_watts_strogatz_graph(n, 4, 0.10)
     G = nx.generators.karate_club_graph()
     # G = nx.generators.social.les_miserables_graph()
-    # G = make_graph()
+    G = make_graph()
     visualize_graph(G)
     topo = Topology()
     topo.construct_from_graph(G, CMNode, GenericChannel)

@@ -6,7 +6,10 @@ Implementation, Results and Discussion
 Implementation and Methodology
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-TODO After implementation
+..
+  TODO After implementation
+
+Implementation would have been very similar to Chandy-Misra and initially they followed the same pattern. At various points, the FSM is triggered which checks and modifies the state and takes actions. The implementation followed the pseudo code and FSM transitions closely; however, it became too hard to translate FSM descriptions into code due to many variable references, calculations of mathematical expressions, and limited time.
 
 ..
   Writing the methodology lies at the core of the paper, and fulfills one of the basic principles underlying the scientific method. Any scientific paper needs to be verifiable by other researchers, so that they can review the results by replicating the experiment and guaranteeing the validity. To assist this, you need to give a completely accurate description of the equipment and the techniques used for gathering the data [Shuttleworth2016]_.
@@ -20,7 +23,10 @@ TODO After implementation
 Results
 ~~~~~~~~
 
-TODO After implementation
+..
+  TODO After implementation
+
+Since implementation was not completed due to complex FSM transitions with descriptions in many mathematical notations that refer to many hard to remember state variables, there are no results.
 
 ..
   Present your AHCv2 run results, plot figures.
@@ -51,7 +57,10 @@ TODO After implementation
 Discussion
 ~~~~~~~~~~
 
-TODO After implementation
+..
+  TODO After implementation
+
+The algorithm's pseudo code in the paper is not sufficient. There are many finite state machine executions and they all depend on states. All transition conditions and actions are represented in mathematical notation. They use many state variables that are hard to remember. Pseudo code itself is also not very intuitive although the algorithm is. Due to this, FSM transitions could not be implemented. Circumventing the FSM implementation is as hard as implementing the algorithm without any pseudocode.
 
 ..
   Present and discuss main learning points.

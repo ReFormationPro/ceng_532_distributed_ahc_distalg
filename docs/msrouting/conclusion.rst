@@ -3,7 +3,12 @@
 Conclusion
 ==========
 
-TODO After implementation
+..
+    TODO After implementation
+
+Merlin-Segall is an intuitive algorithm; however, its paper is hard to swallow. Its pseudocode is far from software code and more like literal mathematical expression translation to code. Perhaps the finite state machine only exists to keep describing the algorithm with mathematical notations.
+
+Its idea is similar to that of Chandy-Misra's as distance messages are sent among peers; however, unlike Chandy-Misra's holistic approach routes are completed in update rounds. In other words, it reaches the minimum cost/latency path one step at a time.
 
 ..
     In general a short summarizing paragraph will do, and under no circumstances should the paragraph simply repeat material from the Abstract or Introduction. In some cases it's possible to now make the original claims more concrete, e.g., by referring to quantitative performance results [Widom2006].

@@ -28,7 +28,34 @@ The pseudocode and the explanations were quite easy to follow. Although we had a
 Results
 ~~~~~~~~
 
-TODO After implementation
+
+We tested the implementation on the following graphs:
+
++-----------------------------------------+
+| .. figure:: ./karate-club.jpg           |
+|   :alt: Karate club graph visualized    |
+|   :width: 400                           |
+|                                         |
+|   Karate club graph visualized          |
+|                                         |
++-----------------------------------------+
+In karate club graph, it gave the following predecessors for nodes when the destination node number is 7:
+
+0: 7, 1: 7, 2: 7, 3: 7, 4: 0, 5: 0, 6: 0, 7: -1, 8: 0, 9: 2, 10: 0, 11: 0, 12: 0, 13: 0, 14: 33, 15: 32, 16: 5, 17: 0, 18: 32, 19: 0, 20: 33, 21: 0, 22: 32, 23: 33, 24: 31, 25: 24, 26: 33, 27: 2, 28: 2, 29: 33, 30: 1, 31: 0, 32: 2, 33: 19
+
+
++-----------------------------------------+
+| .. figure:: ./simple-graph.png          |
+|   :alt: Simple graph visualized         |
+|   :width: 400                           |
+|                                         |
+|   Simple graph visualized               |
+|                                         |
++-----------------------------------------+
+In order to verify the correctness of the implementation with manual calculations, we tried with a simple graph. The implementation gave the following predecessors for nodes when the destination node number is 'a':
+
+'a': -1, 'b': 'a', 'c': 'a', 'd': 'a', 'e': 'c', 'f': 'c'
+
 
 ..
   Present your AHCv2 run results, plot figures.
@@ -58,8 +85,10 @@ TODO After implementation
 
 Discussion
 ~~~~~~~~~~
+..
+  TODO After implementation
 
-TODO After implementation
+Unlike Merlin-Segall, it does not handle topological changes. However, due to less number of functionalities it uses less many messages. The algorithm was very intuitive and simple to implement.
 
 ..
   Present and discuss main learning points.

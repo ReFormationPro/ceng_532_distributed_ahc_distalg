@@ -35,6 +35,12 @@
    .. autoclass:: DistanceMessage
       :members:
       :undoc-members:
+   .. autoclass:: OverNegMessage
+      :members:
+      :undoc-members:
+   .. autoclass:: OverQMMessage
+      :members:
+      :undoc-members:
    
    
 
