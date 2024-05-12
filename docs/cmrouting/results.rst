@@ -32,9 +32,9 @@ Results
 We tested the implementation on the following graphs:
 
 +-----------------------------------------+
-| .. figure:: ./karate-club.jpg           |
+| .. figure:: ./figures/karate-club.jpg   |
 |   :alt: Karate club graph visualized    |
-|   :width: 400                           |
+|   :width: 500                           |
 |                                         |
 |   Karate club graph visualized          |
 |                                         |
@@ -45,9 +45,9 @@ In karate club graph, it gave the following predecessors for nodes when the dest
 
 
 +-----------------------------------------+
-| .. figure:: ./simple-graph.png          |
+| .. figure:: ./figures/simple-graph.png  |
 |   :alt: Simple graph visualized         |
-|   :width: 400                           |
+|   :width: 500                           |
 |                                         |
 |   Simple graph visualized               |
 |                                         |
@@ -56,6 +56,32 @@ In order to verify the correctness of the implementation with manual calculation
 
 'a': -1, 'b': 'a', 'c': 'a', 'd': 'a', 'e': 'c', 'f': 'c'
 
+Next, we plotted execution times against node counts and edge counts.
+
++----------------------------------------------------------------------------------+
+| .. figure:: ./figures/execution-time-vs-node-count.jpg                           |
+|   :alt: Simple graph visualized                                                  |
+|   :width: 500                                                                    |
+|                                                                                  |
+|   Execution time vs Node Counts, where edge count is fixed to 2525               |
+|                                                                                  |
++----------------------------------------------------------------------------------+
+
+..
+  In the experimental results we see above, the execution times linearly increase as the node count increases. This is expected as we noted in the algorithm section, time complexity is shown to be O(\|V\|) by [Lakshmanan1989]_.
+
+In the experimental results we see above, the execution times get lower at a decelerating rate. As mentioned in the algorithm section, [Lakshmanan1989]_ has shown time complexity of Chandy-Misra is O(\|V\|). We cannot see this result from these results.
+
++-------------------------------------------------------------------+
+| .. figure:: ./figures/execution-time-vs-edge-count.jpg            |
+|   :alt: Simple graph visualized                                   |
+|   :width: 500                                                     |
+|                                                                   |
+|   Execution time vs Edge Counts, where node count is fixed to 100 |
+|                                                                   |
++-------------------------------------------------------------------+
+
+In the result shown above, execution times seem to increase linearly as the edge counts increase. Comparing the two charts above, the execution times correlate with edge count but negatively correlate with node counts. Hence, it is likely that the execution times correlate with edges per node.
 
 ..
   Present your AHCv2 run results, plot figures.
@@ -90,6 +116,10 @@ Discussion
 
 Unlike Merlin-Segall, it does not handle topological changes. However, due to less number of functionalities it uses less many messages. The algorithm was very intuitive and simple to implement.
 
+
+.. [Lakshmanan1989] K. B. Lakshmanan, Krishnaiyan Thulasiraman, and M. A. Comeau. 
+    "An efficient distributed protocol for finding shortest paths in networks with negative weights." 
+    IEEE Transactions on Software engineering 15.5 (1989): 639-644.
 ..
   Present and discuss main learning points.
 
